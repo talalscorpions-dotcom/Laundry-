@@ -1,0 +1,176 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../data/app_state.dart';
+import '../../models/enums.dart';
+import '../../models/order.dart';
+import '../../models/user_models.dart';
+import '../../utils/formatters.dart';
+import '../../widgets/status_chip.dart';
+
+/// Where a partner accepts orders, moves items through washing/ironing/ready,
+/// and hands off to a driver at each leg — the "coordinate with drivers"
+/// requirement.
+class PartnerOrderDetailScreen extends StatelessWidget {
+  const PartnerOrderDetailScreen({super.key, required this.orderId});
+
+  final String orderId;
+
+  @override
+  Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final order = appState.orders.firstWhere((o) => o.id == orderId);
+    final availableDrivers = appState.drivers.where((d) => d.isAvailable).toList();
+
+    return Scaffold(
+      appBar: AppBar(title: Text(order.id)),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Status', style: Theme.of(context).textTheme.titleMedium),
+              StatusChip(status: order.status),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Pickup', style: Theme.of(context).textTheme.titleSmall),
+                  Text('${order.pickupAddress.line1}, ${order.pickupAddress.city}'),
+                  Text(order.pickupSlot.label),
+                  const SizedBox(height: 12),
+                  Text('Delivery', style: Theme.of(context).textTheme.titleSmall),
+                  Text('${order.deliveryAddress.line1}, ${order.deliveryAddress.city}'),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Items', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  for (final item in order.items)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${item.quantity} × ${item.name} (${item.serviceType.label})'),
+                        Text(formatCurrency(item.lineTotal)),
+                      ],
+                    ),
+                  const Divider(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [const Text('Order subtotal'), Text(formatCurrency(order.subtotal))],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Platform commission (${(order.commissionRate * 100).toStringAsFixed(0)}%)'),
+                      Text('- ${formatCurrency(order.commissionAmount)}'),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('You receive', style: Theme.of(context).textTheme.titleSmall),
+                      Text(formatCurrency(order.partnerPayout), style: Theme.of(context).textTheme.titleSmall),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          ..._actionsFor(context, appState, order, availableDrivers),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _actionsFor(
+    BuildContext context,
+    AppState appState,
+    LaundryOrder order,
+    List<Driver> availableDrivers,
+  ) {
+    switch (order.status) {
+      case OrderStatus.pending:
+        return [
+          ElevatedButton(
+            onPressed: () => appState.acceptOrder(order.id),
+            child: const Text('Accept order'),
+          ),
+        ];
+      case OrderStatus.accepted:
+        return [
+          Text('Assign a driver for pickup', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          ..._driverTiles(availableDrivers, (driverId) => appState.assignPickupDriver(order.id, driverId)),
+        ];
+      case OrderStatus.pickupAssigned:
+        return [const Text('Waiting for the driver to collect the items from the customer.')];
+      case OrderStatus.pickedUp:
+        return [
+          ElevatedButton(
+            onPressed: () => appState.advanceProcessing(order.id, OrderStatus.washing),
+            child: const Text('Start washing'),
+          ),
+        ];
+      case OrderStatus.washing:
+        return [
+          ElevatedButton(
+            onPressed: () => appState.advanceProcessing(order.id, OrderStatus.ironing),
+            child: const Text('Move to ironing'),
+          ),
+        ];
+      case OrderStatus.ironing:
+        return [
+          ElevatedButton(
+            onPressed: () => appState.advanceProcessing(order.id, OrderStatus.readyForDelivery),
+            child: const Text('Mark ready for delivery'),
+          ),
+        ];
+      case OrderStatus.readyForDelivery:
+        return [
+          Text('Assign a driver for delivery', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          ..._driverTiles(availableDrivers, (driverId) => appState.assignDeliveryDriver(order.id, driverId)),
+        ];
+      case OrderStatus.deliveryAssigned:
+        return [const Text('Waiting for the driver to start the delivery.')];
+      case OrderStatus.outForDelivery:
+        return [const Text('Order is on its way to the customer.')];
+      case OrderStatus.delivered:
+        return [const Text('Order completed.')];
+      case OrderStatus.cancelled:
+        return [const Text('This order was cancelled.')];
+    }
+  }
+
+  List<Widget> _driverTiles(List<Driver> drivers, void Function(String driverId) onAssign) {
+    return [
+      for (final driver in drivers)
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.two_wheeler),
+          title: Text(driver.name),
+          subtitle: Text(driver.vehicle),
+          trailing: TextButton(
+            onPressed: () => onAssign(driver.id),
+            child: const Text('Assign'),
+          ),
+        ),
+    ];
+  }
+}
