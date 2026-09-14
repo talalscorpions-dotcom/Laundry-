@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/app_state.dart';
 import '../../routing/app_routes.dart';
+import 'admin_analytics_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_disputes_screen.dart';
 import 'admin_orders_screen.dart';
@@ -22,6 +23,7 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     const pages = [
       AdminDashboardScreen(),
+      AdminAnalyticsScreen(),
       AdminOrdersScreen(),
       AdminUsersScreen(),
       AdminDisputesScreen(),
@@ -37,6 +39,11 @@ class _AdminShellState extends State<AdminShell> {
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Analytics',
           ),
           NavigationDestination(
             icon: Icon(Icons.list_alt_outlined),

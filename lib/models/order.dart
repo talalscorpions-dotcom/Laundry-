@@ -121,6 +121,33 @@ class LaundryOrder {
   /// (`AppState.confirmDelivery`) instead of just tapping "delivered".
   String? deliveryOtp;
 
+  // ---- Timestamps for the admin analytics screen ----
+  //
+  // `createdAt` already covers "order received." These cover every other
+  // milestone the reports need a duration or a time-bucket from — set by the
+  // matching AppState method (assignPickupDriver, markPickedUp, ...) rather
+  // than parsed out of the free-text activityLog.
+
+  /// When a pickup driver was assigned — i.e. when the driver "accepted"
+  /// the pickup job. Paired with [pickedUpAt] for [pickupDuration].
+  DateTime? pickupAssignedAt;
+  DateTime? pickedUpAt;
+  DateTime? deliveryAssignedAt;
+  DateTime? outForDeliveryAt;
+  DateTime? deliveredAt;
+
+  /// Set together by `AppState.cancelOrder` when [status] becomes
+  /// [OrderStatus.cancelled].
+  DateTime? cancelledAt;
+  CancellationReason? cancellationReason;
+  String? cancelledByRole;
+
+  /// How long the assigned driver took to actually collect the items,
+  /// measured from when they were assigned (effectively, "accepted") the
+  /// pickup job. Null until both timestamps are recorded.
+  Duration? get pickupDuration =>
+      (pickupAssignedAt != null && pickedUpAt != null) ? pickedUpAt!.difference(pickupAssignedAt!) : null;
+
   /// Value of the laundry service itself (what the commission is taken on).
   double get subtotal => items.fold(0, (sum, i) => sum + i.lineTotal);
 

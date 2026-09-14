@@ -56,6 +56,12 @@ enum PaymentStatus { pending, paid, failed, refunded }
 
 enum DisputeStatus { open, resolved }
 
+/// Why an order was cancelled — tracked (rather than just a free-text
+/// reason) so the admin analytics screen can answer questions like "how
+/// many cancellations were because the order was taking too long" instead
+/// of just counting cancellations blindly.
+enum CancellationReason { delay, changedMind, other }
+
 /// KYC/onboarding document review status for Partner and Driver accounts —
 /// set to `pending` the moment they sign up and submit documents. Nothing
 /// in this demo currently flips it to `verified`/`rejected`; a real backend
@@ -151,6 +157,19 @@ extension PaymentMethodX on PaymentMethod {
         return 'Digital Wallet';
       case PaymentMethod.cashOnDelivery:
         return 'Cash on Delivery';
+    }
+  }
+}
+
+extension CancellationReasonX on CancellationReason {
+  String get label {
+    switch (this) {
+      case CancellationReason.delay:
+        return 'Order was taking too long';
+      case CancellationReason.changedMind:
+        return 'Changed my mind';
+      case CancellationReason.other:
+        return 'Other';
     }
   }
 }

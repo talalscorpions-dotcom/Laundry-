@@ -166,12 +166,77 @@ class OrderTrackingScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          if (_canCancel(order.status))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+                onPressed: () => _cancelOrder(context, appState),
+                child: const Text('Cancel order'),
+              ),
+            ),
           if (order.status.isActive)
             OutlinedButton(
               onPressed: () => _raiseIssue(context, appState),
               child: const Text('Report an issue with this order'),
             ),
         ],
+      ),
+    );
+  }
+
+  /// Cancelling only makes sense before a driver has physically collected
+  /// the items — once picked up, someone already has the bag in hand.
+  bool _canCancel(OrderStatus status) =>
+      status == OrderStatus.pending || status == OrderStatus.accepted || status == OrderStatus.pickupAssigned;
+
+  void _cancelOrder(BuildContext context, AppState appState) {
+    CancellationReason selected = CancellationReason.delay;
+    final notesController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setState) => AlertDialog(
+          title: const Text('Cancel order'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Why are you cancelling?'),
+              for (final reason in CancellationReason.values)
+                RadioListTile<CancellationReason>(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  value: reason,
+                  groupValue: selected,
+                  title: Text(reason.label),
+                  onChanged: (v) => setState(() => selected = v ?? selected),
+                ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: notesController,
+                maxLines: 2,
+                decoration: const InputDecoration(hintText: 'Anything else? (optional)'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Keep order')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                final notes = notesController.text.trim();
+                final reasonText = notes.isEmpty ? selected.label : '${selected.label} — $notes';
+                appState.cancelOrder(orderId, reasonText, category: selected, cancelledByRole: 'customer');
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Order cancelled.')),
+                );
+              },
+              child: const Text('Cancel order'),
+            ),
+          ],
+        ),
       ),
     );
   }

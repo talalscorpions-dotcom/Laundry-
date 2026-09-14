@@ -205,7 +205,34 @@ signing up as that role (see above):
   customer books from) on the Schedule tab.
 - **Admin panel** (`lib/screens/admin/`) — GMV and commission-revenue KPIs,
   an operations pipeline view, a directory of every partner/driver, every
-  order in the system, and a dispute queue with a resolve flow.
+  order in the system, a dispute queue with a resolve flow, and a dedicated
+  **Analytics** tab (below) for deeper, period-filtered reporting.
+
+### Admin Analytics tab
+
+`lib/screens/admin/admin_analytics_screen.dart`, filtered by a Today / This
+week / This month / This year / All time selector
+(`lib/utils/analytics.dart`'s `ReportPeriod`):
+
+- **Order funnel** — orders received vs. actually picked up vs. delivered,
+  for the selected period.
+- **Revenue** — GMV and platform commission generated in the period
+  (`AppState.revenueFor`/`commissionFor`).
+- **Cancellations** — how many orders were cancelled, and how many of those
+  were specifically because the customer said the order was taking too long
+  (`CancellationReason.delay` — set by the customer's **Cancel order**
+  button on the tracking screen, reachable before a driver has physically
+  picked up the items).
+- **Driver pickup time** — average time from when a driver is assigned a
+  pickup (`AppState.assignPickupDriver`, effectively "accepting" the job) to
+  when they mark it picked up, plus a per-driver breakdown flagging pickups
+  over `AppState.kSlowPickupThreshold` (15 minutes) as slow.
+- **Partner performance** — orders received per partner in the period.
+
+These all read from timestamp fields on `LaundryOrder` (`pickupAssignedAt`,
+`pickedUpAt`, `deliveryAssignedAt`, `outForDeliveryAt`, `deliveredAt`,
+`cancelledAt`) set by the corresponding `AppState` method as the order moves
+through its lifecycle — not parsed out of the free-text activity log.
 
 ## Architecture
 
