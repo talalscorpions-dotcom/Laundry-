@@ -5,6 +5,7 @@ import '../../data/app_state.dart';
 import '../../routing/app_routes.dart';
 import 'driver_earnings_screen.dart';
 import 'driver_home_screen.dart';
+import 'driver_schedule_screen.dart';
 
 class DriverShell extends StatefulWidget {
   const DriverShell({super.key});
@@ -22,6 +23,7 @@ class _DriverShellState extends State<DriverShell> {
     final driver = appState.driverById(appState.currentDriverId)!;
     final pages = [
       const DriverHomeScreen(),
+      const DriverScheduleScreen(),
       const DriverEarningsScreen(),
       _DriverProfileTab(driverName: driver.name, vehicle: driver.vehicle),
     ];
@@ -32,6 +34,11 @@ class _DriverShellState extends State<DriverShell> {
         onDestinationSelected: (i) => setState(() => _index = i),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.route_outlined), selectedIcon: Icon(Icons.route), label: 'Tasks'),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Schedule',
+          ),
           NavigationDestination(
             icon: Icon(Icons.payments_outlined),
             selectedIcon: Icon(Icons.payments),

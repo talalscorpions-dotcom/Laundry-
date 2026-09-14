@@ -39,6 +39,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _deliveryAddress ??= appState.currentCustomer.addresses.first;
     final days = nextDays(4);
     final slots = slotsForDay(_selectedDay);
+    if (_selectedSlot != null && appState.isSlotFullyBooked(_selectedSlot!)) {
+      // Someone else took the last rostered driver for it since it was picked.
+      _selectedSlot = null;
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Schedule pickup')),
@@ -68,8 +72,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               itemBuilder: (context, index) {
                 final day = days[index];
                 final selected = day == _selectedDay;
+                final dayFull = slotsForDay(day).every(appState.isSlotFullyBooked);
                 return ChoiceChip(
-                  label: Text('${weekdayLabel(day)} • ${monthDayLabel(day)}'),
+                  label: Text('${weekdayLabel(day)} • ${monthDayLabel(day)}${dayFull ? ' (Full)' : ''}'),
                   selected: selected,
                   onSelected: (_) => setState(() {
                     _selectedDay = day;
@@ -88,9 +93,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             children: [
               for (final slot in slots)
                 ChoiceChip(
-                  label: Text(slot.label),
+                  label: Text(
+                    appState.isSlotFullyBooked(slot) ? '${slot.label} • Fully booked' : slot.label,
+                  ),
                   selected: _selectedSlot?.start == slot.start,
-                  onSelected: (_) => setState(() => _selectedSlot = slot),
+                  onSelected: appState.isSlotFullyBooked(slot) ? null : (_) => setState(() => _selectedSlot = slot),
                 ),
             ],
           ),

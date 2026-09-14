@@ -20,7 +20,6 @@ class PartnerOrderDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final order = appState.orders.firstWhere((o) => o.id == orderId);
-    final availableDrivers = appState.drivers.where((d) => d.isAvailable).toList();
 
     return Scaffold(
       appBar: AppBar(title: Text(order.id)),
@@ -92,18 +91,13 @@ class PartnerOrderDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-          ..._actionsFor(context, appState, order, availableDrivers),
+          ..._actionsFor(context, appState, order),
         ],
       ),
     );
   }
 
-  List<Widget> _actionsFor(
-    BuildContext context,
-    AppState appState,
-    LaundryOrder order,
-    List<Driver> availableDrivers,
-  ) {
+  List<Widget> _actionsFor(BuildContext context, AppState appState, LaundryOrder order) {
     switch (order.status) {
       case OrderStatus.pending:
         return [
@@ -113,10 +107,17 @@ class PartnerOrderDetailScreen extends StatelessWidget {
           ),
         ];
       case OrderStatus.accepted:
+        final pickupDrivers = appState.driversAvailableForSlot(order.pickupSlot);
         return [
           Text('Assign a driver for pickup', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
-          ..._driverTiles(availableDrivers, (driverId) => appState.assignPickupDriver(order.id, driverId)),
+          if (pickupDrivers.isEmpty)
+            const Text(
+              'Fully booked — every driver rostered for this time slot is already covering another pickup.',
+              style: TextStyle(color: Colors.red),
+            )
+          else
+            ..._driverTiles(pickupDrivers, (driverId) => appState.assignPickupDriver(order.id, driverId)),
         ];
       case OrderStatus.pickupAssigned:
         return [const Text('Waiting for the driver to collect the items from the customer.')];
@@ -142,10 +143,14 @@ class PartnerOrderDetailScreen extends StatelessWidget {
           ),
         ];
       case OrderStatus.readyForDelivery:
+        final deliveryDrivers = appState.drivers.where((d) => d.isAvailable).toList();
         return [
           Text('Assign a driver for delivery', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 8),
-          ..._driverTiles(availableDrivers, (driverId) => appState.assignDeliveryDriver(order.id, driverId)),
+          if (deliveryDrivers.isEmpty)
+            const Text('No drivers currently on shift.', style: TextStyle(color: Colors.red))
+          else
+            ..._driverTiles(deliveryDrivers, (driverId) => appState.assignDeliveryDriver(order.id, driverId)),
         ];
       case OrderStatus.deliveryAssigned:
         return [const Text('Waiting for the driver to start the delivery.')];

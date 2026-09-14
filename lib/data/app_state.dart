@@ -10,6 +10,7 @@ import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../services/payment_service.dart';
 import '../utils/password_hash.dart';
+import '../utils/scheduling.dart';
 import 'mock_data.dart';
 
 /// Single source of truth for the whole demo: the "backend" every screen
@@ -29,9 +30,13 @@ class AppState extends ChangeNotifier {
   final LocationTracker locationTracker;
   final NotificationService notificationService;
 
+  // Customer is fully immutable (nothing ever mutates a seeded Customer in
+  // place), so sharing MockData's instances is harmless. LaundryPartner and
+  // Driver are not — see their copyForNewSession() doc comments — so each
+  // AppState gets its own independent copies of those.
   final List<Customer> customers = List.of(MockData.customers);
-  final List<LaundryPartner> partners = List.of(MockData.partners);
-  final List<Driver> drivers = List.of(MockData.drivers);
+  final List<LaundryPartner> partners = MockData.partners.map((p) => p.copyForNewSession()).toList();
+  final List<Driver> drivers = MockData.drivers.map((d) => d.copyForNewSession()).toList();
   final List<LaundryOrder> orders = [];
   final List<Dispute> disputes = [];
   final List<Account> _accounts = List.of(MockData.accounts);
@@ -289,6 +294,67 @@ class AppState extends ChangeNotifier {
     final list = orders.where((o) => o.pickupDriverId == driverId || o.deliveryDriverId == driverId).toList();
     list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;
+  }
+
+  /// Sets whether [driverId] is rostered for [slotIndex] (an index into
+  /// `kSlotWindows`) on [weekday] (`DateTime.monday`..`DateTime.sunday`),
+  /// every week. Called from the driver's "My schedule" screen.
+  void setDriverSlotAvailability({
+    required String driverId,
+    required int weekday,
+    required int slotIndex,
+    required bool available,
+  }) {
+    final driver = driverById(driverId);
+    if (driver == null) return;
+    final daySlots = driver.weeklyAvailability.putIfAbsent(weekday, () => {});
+    if (available) {
+      daySlots.add(slotIndex);
+    } else {
+      daySlots.remove(slotIndex);
+    }
+    notifyListeners();
+  }
+
+  /// How many drivers are, per their weekly schedule, rostered for the
+  /// window [slot] falls in (matched by weekday + start hour) — regardless
+  /// of whether they're already covering an order in it.
+  int _rosteredDriverCountFor(TimeSlot slot) {
+    final index = slotIndexForHour(slot.start.hour);
+    if (index == null) return 0;
+    return drivers.where((d) => d.isAvailableAt(slot.start.weekday, index)).length;
+  }
+
+  /// How many active orders already occupy this exact pickup window.
+  int _bookedCountFor(TimeSlot slot) {
+    return orders.where((o) => o.status.isActive && o.pickupSlot.start.isAtSameMomentAs(slot.start)).length;
+  }
+
+  /// Whether a customer can still book [slot] for pickup. False once every
+  /// driver rostered for that weekday/window already has an order booked
+  /// into it — shown to the customer as "Fully booked" on the schedule
+  /// screen instead of a pickable time.
+  bool isSlotFullyBooked(TimeSlot slot) {
+    final rostered = _rosteredDriverCountFor(slot);
+    if (rostered == 0) return true;
+    return _bookedCountFor(slot) >= rostered;
+  }
+
+  /// Drivers rostered for [slot]'s weekday/window who aren't already
+  /// covering another active pickup in that same window and haven't gone
+  /// off-shift (`isAvailable`) — what a partner should be offered when
+  /// assigning a pickup driver. Empty means the slot is fully booked.
+  List<Driver> driversAvailableForSlot(TimeSlot slot) {
+    final index = slotIndexForHour(slot.start.hour);
+    if (index == null) return [];
+    final busyDriverIds = orders
+        .where((o) => o.status.isActive && o.pickupSlot.start.isAtSameMomentAs(slot.start))
+        .map((o) => o.pickupDriverId)
+        .whereType<String>()
+        .toSet();
+    return drivers
+        .where((d) => d.isAvailable && d.isAvailableAt(slot.start.weekday, index) && !busyDriverIds.contains(d.id))
+        .toList();
   }
 
   /// Places a new order: snapshots the partner's current commission rate,

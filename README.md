@@ -77,6 +77,30 @@ a token from an emailed reset link first; see the warning on
 ship to production (as written, anyone who knows an email on the platform
 could reset that account's password).
 
+## Driver availability & slot capacity
+
+Each driver sets a **weekly recurring schedule** — which of the six 9 AM-9 PM
+windows (`kSlotWindows` in `lib/utils/scheduling.dart`) they work, per day
+of the week — on the Driver app's **Schedule** tab
+(`lib/screens/driver/driver_schedule_screen.dart`). This is what makes a
+pickup slot "fully booked":
+
+- `AppState.isSlotFullyBooked(slot)` — true once every driver rostered for
+  that weekday/window already has an order booked into it. The customer's
+  schedule screen (`lib/screens/customer/schedule_screen.dart`) disables
+  such slots and labels them "Fully booked" instead of a pickable time
+  (and flags a day as "(Full)" once every slot in it is).
+- `AppState.driversAvailableForSlot(slot)` — the drivers a partner can
+  actually offer for a pickup: rostered for that window, on shift
+  (`Driver.isAvailable`), and not already covering a different active
+  pickup in the same window. When this is empty, the partner's order
+  screen (`lib/screens/partner/partner_order_detail_screen.dart`) shows
+  "Fully booked" instead of an empty driver list.
+
+New drivers (sign-up and the seeded demo accounts) default to being
+rostered for every slot, every day — otherwise every booking would look
+fully booked before anyone has ever visited the schedule screen.
+
 ## The four panels
 
 All four are role-based flows inside **one app**, reached by signing in or
@@ -90,8 +114,10 @@ signing up as that role (see above):
   accept them, move items through washing → ironing → ready, assign drivers
   for pickup/delivery, and edit per-item pricing.
 - **Driver/Rider app** (`lib/screens/driver/`) — see assigned pickup/delivery
-  tasks, a live route-tracking view, and one-tap milestone updates (picked
-  up / out for delivery / delivered).
+  tasks, a live route-tracking view, one-tap milestone updates (picked up /
+  out for delivery / delivered), and set a **weekly availability
+  schedule** (9 AM - 9 PM, in the same six windows a customer books from) on
+  the Schedule tab.
 - **Admin panel** (`lib/screens/admin/`) — GMV and commission-revenue KPIs,
   a directory of every partner/driver, every order in the system, and a
   dispute queue with a resolve flow.
