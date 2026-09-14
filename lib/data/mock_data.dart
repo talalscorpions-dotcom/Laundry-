@@ -14,19 +14,22 @@ class MockData {
   static const _adminPassword = 'admin123';
 
   static final List<Customer> customers = [
-    const Customer(
+    // Not `const`: addresses is appended to at runtime
+    // (AppState.addCustomerAddress), which a const list would forbid.
+    // ignore: prefer_const_constructors
+    Customer(
       id: 'cust-1',
       name: 'Aisha Al Balushi',
       phone: '+968 9123 4567',
       addresses: [
-        Address(
+        const Address(
           id: 'addr-home',
           label: 'Home',
           line1: 'Way 2812, Al Khuwair',
           city: 'Muscat',
           location: GeoPoint(23.588, 58.407),
         ),
-        Address(
+        const Address(
           id: 'addr-work',
           label: 'Office',
           line1: 'CBD Area, Building 14',

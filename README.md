@@ -11,6 +11,30 @@ it runs standalone with no backend required.
 This started life as a module inside the `Aqary-` real-estate repo and now
 lives here as its own independent Flutter project/repo.
 
+## Address selection (locate me, saved addresses, or add one)
+
+Picking a pickup/delivery address on the schedule screen
+(`lib/screens/customer/address_selector.dart`) works like Talabat's address
+step:
+
+- **Use my current location** — a one-tap, one-off pickup point read from
+  the device's real GPS (`lib/services/device_location_service.dart`, via
+  the `geolocator` package — this is real, not simulated). Used for that
+  order only; not saved to the address book.
+- **Saved addresses** — the customer's address book
+  (`Customer.addresses`), same as before.
+- **Add a new address** — opens `lib/screens/customer/add_address_screen.dart`:
+  drop a pin on a map (or use current location to set one), confirm a
+  label/address/city, and it's saved to the address book for future orders.
+
+The map itself (`lib/widgets/map_pin_picker.dart`) is a stylized,
+tap-to-place placeholder over a small fixed demo area, **not real Google
+Maps tiles** — that needs a Google Maps API key with billing enabled, which
+this project doesn't have. It's built the same way as the live-tracking map
+so a real `google_maps_flutter` integration can swap in later without
+changing how callers use it (they just get a `GeoPoint` out either way).
+Real device geolocation, though, needs no API key and works today.
+
 ## Auth & Role-Based Access Control (RBAC)
 
 The app opens on a **Sign in** screen (`lib/screens/auth/sign_in_screen.dart`);

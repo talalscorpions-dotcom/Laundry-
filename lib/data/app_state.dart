@@ -6,6 +6,7 @@ import '../models/dispute.dart';
 import '../models/enums.dart';
 import '../models/order.dart';
 import '../models/user_models.dart';
+import '../services/device_location_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../services/payment_service.dart';
@@ -22,19 +23,21 @@ class AppState extends ChangeNotifier {
     PaymentGateway? paymentGateway,
     LocationTracker? locationTracker,
     NotificationService? notificationService,
+    DeviceLocationService? deviceLocationService,
   })  : paymentGateway = paymentGateway ?? MockPaymentGateway(),
         locationTracker = locationTracker ?? SimulatedLocationTracker(),
-        notificationService = notificationService ?? InMemoryNotificationService();
+        notificationService = notificationService ?? InMemoryNotificationService(),
+        deviceLocationService = deviceLocationService ?? GeolocatorDeviceLocationService();
 
   final PaymentGateway paymentGateway;
   final LocationTracker locationTracker;
   final NotificationService notificationService;
+  final DeviceLocationService deviceLocationService;
 
-  // Customer is fully immutable (nothing ever mutates a seeded Customer in
-  // place), so sharing MockData's instances is harmless. LaundryPartner and
-  // Driver are not — see their copyForNewSession() doc comments — so each
-  // AppState gets its own independent copies of those.
-  final List<Customer> customers = List.of(MockData.customers);
+  // LaundryPartner, Driver, and Customer are all mutated in place at
+  // runtime (see their copyForNewSession() doc comments), so each AppState
+  // gets its own independent copies rather than sharing MockData's.
+  final List<Customer> customers = MockData.customers.map((c) => c.copyForNewSession()).toList();
   final List<LaundryPartner> partners = MockData.partners.map((p) => p.copyForNewSession()).toList();
   final List<Driver> drivers = MockData.drivers.map((d) => d.copyForNewSession()).toList();
   final List<LaundryOrder> orders = [];
@@ -268,6 +271,13 @@ class AppState extends ChangeNotifier {
   }
 
   Customer customerById(String id) => customers.firstWhere((c) => c.id == id);
+
+  /// Saves a new address to [customerId]'s address book — the "Add a new
+  /// address" step in the pickup/delivery address picker.
+  void addCustomerAddress(String customerId, Address address) {
+    customerById(customerId).addresses.add(address);
+    notifyListeners();
+  }
 
   LaundryPartner partnerById(String id) => partners.firstWhere((p) => p.id == id);
 

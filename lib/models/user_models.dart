@@ -13,7 +13,15 @@ class Customer {
   final String id;
   final String name;
   final String phone;
+
+  /// Mutable in place (a new saved address is appended by
+  /// `AppState.addCustomerAddress`) while the list reference itself stays
+  /// fixed — same pattern as `LaundryPartner.catalog`.
   final List<Address> addresses;
+
+  /// A copy with its own, independent [addresses] list. See
+  /// `LaundryPartner.copyForNewSession` for why this matters.
+  Customer copyForNewSession() => Customer(id: id, name: name, phone: phone, addresses: List.of(addresses));
 }
 
 /// A local laundromat/dry-cleaner onboarded to the marketplace. The

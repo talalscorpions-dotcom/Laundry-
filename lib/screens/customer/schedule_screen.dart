@@ -5,6 +5,7 @@ import '../../data/app_state.dart';
 import '../../models/address.dart';
 import '../../models/order.dart';
 import '../../utils/scheduling.dart';
+import 'address_selector.dart';
 import 'checkout_payment_screen.dart';
 
 /// "Smart scheduling" — pick a pickup address, a day, a locked time window,
@@ -51,15 +52,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         children: [
           Text('Pickup address', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          for (final address in appState.currentCustomer.addresses)
-            RadioListTile<Address>(
-              contentPadding: EdgeInsets.zero,
-              value: address,
-              groupValue: _pickupAddress,
-              title: Text(address.label),
-              subtitle: Text('${address.line1}, ${address.city}'),
-              onChanged: (v) => setState(() => _pickupAddress = v),
-            ),
+          AddressSelector(
+            selected: _pickupAddress,
+            onChanged: (address) => setState(() {
+              _pickupAddress = address;
+              if (_sameAddress) _deliveryAddress = address;
+            }),
+          ),
           const SizedBox(height: 16),
           Text('Pickup day', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -114,15 +113,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           if (!_sameAddress) ...[
             Text('Delivery address', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            for (final address in appState.currentCustomer.addresses)
-              RadioListTile<Address>(
-                contentPadding: EdgeInsets.zero,
-                value: address,
-                groupValue: _deliveryAddress,
-                title: Text(address.label),
-                subtitle: Text('${address.line1}, ${address.city}'),
-                onChanged: (v) => setState(() => _deliveryAddress = v),
-              ),
+            AddressSelector(
+              selected: _deliveryAddress,
+              onChanged: (address) => setState(() => _deliveryAddress = address),
+            ),
           ],
         ],
       ),
