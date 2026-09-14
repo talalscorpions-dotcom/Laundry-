@@ -5,6 +5,26 @@ allprojects {
     }
 }
 
+// Compatibility shim: the current Flutter Gradle plugin only registers a
+// `flutter` extension on the `:app` module. Some plugins' own android/
+// build.gradle still reference `flutter.compileSdkVersion` etc. directly
+// (the pre-3.16 integration style, before that registration was app-only) —
+// e.g. file_picker 11.x fails with "unknown property 'flutter'" without
+// this. Restore those values, matching FlutterExtension's own defaults in
+// this Flutter version, for every other subproject. `beforeProject` runs
+// ahead of a project's build.gradle script body, so this is in place by the
+// time such a script reads `flutter.*`.
+gradle.beforeProject { project ->
+    if (project.name != "app") {
+        project.ext.flutter = [
+            compileSdkVersion: 34,
+            minSdkVersion: 21,
+            targetSdkVersion: 34,
+            ndkVersion: "23.1.7779620",
+        ]
+    }
+}
+
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
