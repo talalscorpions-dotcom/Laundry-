@@ -100,7 +100,8 @@ class _SignInScreenState extends State<SignInScreen> {
                       'Partner: sparkle@example.com\n'
                       'Driver: ali@example.com\n'
                       'Admin: admin@laundrygo.com\n'
-                      '(password: password123, admin: admin123)',
+                      'Hub staff: staff@laundrygo.com\n'
+                      '(password: password123, admin: admin123, staff: staff123)',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

@@ -12,6 +12,7 @@ import '../utils/password_hash.dart';
 class MockData {
   static const _demoPassword = 'password123';
   static const _adminPassword = 'admin123';
+  static const _staffPassword = 'staff123';
 
   static final List<Customer> customers = [
     // Not `const`: addresses is appended to at runtime
@@ -136,6 +137,16 @@ class MockData {
       passwordHash: hashPasswordForDemo(_demoPassword),
       role: UserRole.driver,
       linkedId: drivers[0].id,
+    ),
+    // Hub operations staff — like admin, not self-service (see `AppState.signUp`).
+    // No `linkedId`: staff act on every order, not on one linked
+    // Customer/Partner/Driver record.
+    Account(
+      id: 'acct-staff',
+      name: 'Hub Staff',
+      email: 'staff@laundrygo.com',
+      passwordHash: hashPasswordForDemo(_staffPassword),
+      role: UserRole.staff,
     ),
   ];
 }

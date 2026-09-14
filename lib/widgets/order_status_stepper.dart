@@ -3,14 +3,17 @@ import 'package:flutter/material.dart';
 import '../models/enums.dart';
 
 /// The subset (and order) of statuses shown to a customer as a linear
-/// journey. `pickupAssigned`/`deliveryAssigned` fold into the neighbouring
-/// step below so the stepper doesn't grow every time a driver is assigned.
+/// journey. Several internal statuses fold into one neighbouring step so the
+/// stepper doesn't grow every time a driver is assigned or staff hand the
+/// bag off internally — `atHub`/`inspecting` are both "at the laundry", and
+/// `readyForDelivery`/`deliveryAssigned` are both "ready for delivery".
 const List<OrderStatus> _steps = [
   OrderStatus.pending,
   OrderStatus.accepted,
   OrderStatus.pickedUp,
-  OrderStatus.washing,
-  OrderStatus.ironing,
+  OrderStatus.atHub,
+  OrderStatus.processing,
+  OrderStatus.qualityCheck,
   OrderStatus.readyForDelivery,
   OrderStatus.outForDelivery,
   OrderStatus.delivered,
@@ -25,17 +28,20 @@ int _stepIndexFor(OrderStatus status) {
       return 1;
     case OrderStatus.pickedUp:
       return 2;
-    case OrderStatus.washing:
+    case OrderStatus.atHub:
+    case OrderStatus.inspecting:
       return 3;
-    case OrderStatus.ironing:
+    case OrderStatus.processing:
       return 4;
+    case OrderStatus.qualityCheck:
+      return 5;
     case OrderStatus.readyForDelivery:
     case OrderStatus.deliveryAssigned:
-      return 5;
-    case OrderStatus.outForDelivery:
       return 6;
-    case OrderStatus.delivered:
+    case OrderStatus.outForDelivery:
       return 7;
+    case OrderStatus.delivered:
+      return 8;
     case OrderStatus.cancelled:
       return -1;
   }

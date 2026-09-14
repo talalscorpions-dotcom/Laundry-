@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/account.dart';
@@ -48,6 +50,8 @@ class AppState extends ChangeNotifier {
   int _customerSeq = 1;
   int _partnerSeq = 1;
   int _driverSeq = 1;
+  int _bagSeq = 1;
+  final Random _random = Random();
 
   // ---- Auth / RBAC ----
   //
@@ -100,8 +104,8 @@ class AppState extends ChangeNotifier {
     final normalizedEmail = email.trim().toLowerCase();
     final trimmedPhone = phone.trim();
 
-    if (role == UserRole.admin) {
-      return const AuthResult.failure('Admin accounts cannot self-register — contact an existing admin.');
+    if (role == UserRole.admin || role == UserRole.staff) {
+      return const AuthResult.failure('Admin and staff accounts cannot self-register — contact an existing admin.');
     }
     if (trimmedName.isEmpty) {
       return const AuthResult.failure('Enter your name.');
@@ -194,8 +198,9 @@ class AppState extends ChangeNotifier {
         ));
         break;
       case UserRole.admin:
+      case UserRole.staff:
         // Unreachable: guarded above.
-        return const AuthResult.failure('Admin accounts cannot self-register — contact an existing admin.');
+        return const AuthResult.failure('Admin and staff accounts cannot self-register — contact an existing admin.');
     }
 
     final account = Account(
@@ -441,10 +446,94 @@ class AppState extends ChangeNotifier {
     });
   }
 
-  void advanceProcessing(String orderId, OrderStatus next) {
+  /// Driver drops the bag at the laundry hub. Stands in for scanning a
+  /// printed/QR bag tag — see [LaundryOrder.bagId]'s doc.
+  void markDroppedOffAtHub(String orderId) {
     _mutate(orderId, (o) {
-      o.status = next;
-      o.logEvent('Status updated to ${next.label}.');
+      o.bagId = 'BAG-${_bagSeq++}';
+      o.status = OrderStatus.atHub;
+      o.logEvent('Dropped off at the laundry hub as bag ${o.bagId}.');
+    });
+  }
+
+  /// Staff pick up the bag to start verifying it against what the customer
+  /// ordered.
+  void startInspection(String orderId) {
+    _mutate(orderId, (o) {
+      o.status = OrderStatus.inspecting;
+      o.logEvent('Staff started inspecting the bag.');
+    });
+  }
+
+  /// Staff finish inspection: [actualQuantities] (catalogItemId -> counted
+  /// quantity) overwrites each matching `OrderItem.actualQuantity` — which is
+  /// what `LaundryOrder.subtotal`/`total` bill from — [notes] and
+  /// [photoNames] document anything worth flagging (a short count, a
+  /// pre-existing stain/damage), and the order moves into processing.
+  void recordInspection(
+    String orderId, {
+    Map<String, int> actualQuantities = const {},
+    List<String> notes = const [],
+    List<String> photoNames = const [],
+  }) {
+    _mutate(orderId, (o) {
+      for (final item in o.items) {
+        final actual = actualQuantities[item.catalogItemId];
+        if (actual != null && actual != item.actualQuantity) {
+          o.logEvent('${item.name}: quantity adjusted from ${item.actualQuantity} to $actual.');
+          item.actualQuantity = actual;
+        }
+      }
+      o.inspectionNotes.addAll(notes);
+      o.inspectionPhotoNames.addAll(photoNames);
+      o.status = OrderStatus.processing;
+      o.processingStage = ProcessingStage.received;
+      o.logEvent('Inspection complete; processing started.');
+    });
+    notificationService.notify(orders.firstWhere((o) => o.id == orderId).customerId,
+        'Your order $orderId has been inspected and is now being processed.');
+  }
+
+  /// Moves the internal wash/dry/iron pipeline one step forward. Once past
+  /// the last stage ([ProcessingStage.packing]), call [completeProcessing]
+  /// to send the order to quality check.
+  void advanceProcessingStage(String orderId) {
+    _mutate(orderId, (o) {
+      final current = o.processingStage;
+      if (current == null) return;
+      final next = current.next;
+      if (next != null) {
+        o.processingStage = next;
+        o.logEvent('Processing stage: ${next.label}.');
+      }
+    });
+  }
+
+  /// Finishes the wash/dry/iron pipeline and sends the order to QC.
+  void completeProcessing(String orderId) {
+    _mutate(orderId, (o) {
+      o.processingStage = null;
+      o.status = OrderStatus.qualityCheck;
+      o.logEvent('Processing complete; awaiting quality check.');
+    });
+  }
+
+  /// Staff record a QC pass/fail. A pass moves the order to
+  /// [OrderStatus.readyForDelivery]; a fail sends it back into the folding
+  /// stage for rework rather than all the way back to washing.
+  void completeQualityCheck(String orderId, {required bool passed, String? notes}) {
+    _mutate(orderId, (o) {
+      if (notes != null && notes.trim().isNotEmpty) {
+        o.inspectionNotes.add('QC: ${notes.trim()}');
+      }
+      if (passed) {
+        o.status = OrderStatus.readyForDelivery;
+        o.logEvent('Quality check passed; ready for delivery.');
+      } else {
+        o.status = OrderStatus.processing;
+        o.processingStage = ProcessingStage.folding;
+        o.logEvent('Quality check failed; sent back for rework.');
+      }
     });
   }
 
@@ -456,21 +545,35 @@ class AppState extends ChangeNotifier {
     });
   }
 
+  /// Generates the delivery OTP and marks the order en route. The customer
+  /// sees this code on their tracking screen; the driver collects it back
+  /// from them to call [confirmDelivery] — a lightweight stand-in for a real
+  /// SMS/WhatsApp OTP delivery.
   void markOutForDelivery(String orderId) {
     _mutate(orderId, (o) {
+      o.deliveryOtp = (1000 + _random.nextInt(9000)).toString();
       o.status = OrderStatus.outForDelivery;
       o.logEvent('Out for delivery.');
     });
   }
 
-  void markDelivered(String orderId) {
+  /// The driver's delivery-confirmation step: [enteredOtp] must match the
+  /// code `markOutForDelivery` generated. Returns false (and leaves the
+  /// order untouched) on a mismatch instead of throwing, so the UI can show
+  /// an inline "incorrect code" error and let the driver retry.
+  bool confirmDelivery(String orderId, String enteredOtp) {
+    final order = orders.firstWhere((o) => o.id == orderId);
+    if (order.deliveryOtp == null || order.deliveryOtp != enteredOtp.trim()) {
+      return false;
+    }
     _mutate(orderId, (o) {
       o.status = OrderStatus.delivered;
       if (o.paymentMethod == PaymentMethod.cashOnDelivery) {
         o.paymentStatus = PaymentStatus.paid;
       }
-      o.logEvent('Delivered to customer.');
+      o.logEvent('Delivered to customer (OTP confirmed).');
     });
+    return true;
   }
 
   void cancelOrder(String orderId, String reason) {
@@ -514,6 +617,31 @@ class AppState extends ChangeNotifier {
   int get activeOrderCount => orders.where((o) => o.status.isActive).length;
 
   int get completedOrderCount => orders.where((o) => o.status == OrderStatus.delivered).length;
+
+  /// Per-stage operational counts for the admin ops dashboard — mirrors the
+  /// pipeline view a real ops team watches (how many orders are stuck where,
+  /// right now), rather than just GMV/commission totals.
+  int _countWhere(bool Function(LaundryOrder o) test) => orders.where(test).length;
+
+  int get newOrderCount => _countWhere((o) => o.status == OrderStatus.pending);
+
+  int get pickupPendingCount =>
+      _countWhere((o) => o.status == OrderStatus.accepted || o.status == OrderStatus.pickupAssigned);
+
+  int get atHubCount => _countWhere((o) => o.status == OrderStatus.pickedUp || o.status == OrderStatus.atHub);
+
+  int get inspectingCount => _countWhere((o) => o.status == OrderStatus.inspecting);
+
+  int get processingCount => _countWhere((o) => o.status == OrderStatus.processing);
+
+  int get qualityCheckCount => _countWhere((o) => o.status == OrderStatus.qualityCheck);
+
+  int get readyForDeliveryCount => _countWhere((o) => o.status == OrderStatus.readyForDelivery);
+
+  int get outForDeliveryCount =>
+      _countWhere((o) => o.status == OrderStatus.deliveryAssigned || o.status == OrderStatus.outForDelivery);
+
+  int get deliveredCount => completedOrderCount;
 
   void _mutate(String orderId, void Function(LaundryOrder order) mutate) {
     final order = orders.firstWhere((o) => o.id == orderId);

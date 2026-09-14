@@ -16,6 +16,7 @@ class AppRoutes {
   static const partner = '/partner';
   static const driver = '/driver';
   static const admin = '/admin';
+  static const staff = '/staff';
 
   /// Routes reachable only while signed out — visiting one while already
   /// signed in redirects to the caller's own role shell instead.
@@ -31,6 +32,8 @@ class AppRoutes {
         return driver;
       case UserRole.admin:
         return admin;
+      case UserRole.staff:
+        return staff;
     }
   }
 
@@ -41,6 +44,7 @@ class AppRoutes {
     if (name == partner) return UserRole.partner;
     if (name == driver) return UserRole.driver;
     if (name == admin) return UserRole.admin;
+    if (name == staff) return UserRole.staff;
     return null;
   }
 }

@@ -61,6 +61,55 @@ class OrderTrackingScreen extends StatelessWidget {
           if (map != null) ...[map, const SizedBox(height: 16)],
           if (order.status != OrderStatus.cancelled) OrderStatusStepper(status: order.status),
           const SizedBox(height: 8),
+          if (order.status == OrderStatus.outForDelivery && order.deliveryOtp != null)
+            Card(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Your delivery code', style: Theme.of(context).textTheme.titleSmall),
+                    const SizedBox(height: 4),
+                    Text(
+                      order.deliveryOtp!,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(letterSpacing: 4),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text('Give this to the driver when your order arrives to confirm delivery.'),
+                  ],
+                ),
+              ),
+            ),
+          if (order.status == OrderStatus.outForDelivery && order.deliveryOtp != null) const SizedBox(height: 16),
+          if (order.bagId != null || order.inspectionNotes.isNotEmpty)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('At the laundry', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    if (order.bagId != null) Text('Bag ID: ${order.bagId}'),
+                    if (order.inspectionNotes.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text('Notes from inspection & quality check', style: Theme.of(context).textTheme.titleSmall),
+                      for (final note in order.inspectionNotes)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Text('• $note', style: Theme.of(context).textTheme.bodySmall),
+                        ),
+                    ],
+                    if (order.inspectionPhotoNames.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text('Photos: ${order.inspectionPhotoNames.join(', ')}', style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          if (order.bagId != null || order.inspectionNotes.isNotEmpty) const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -75,7 +124,11 @@ class OrderTrackingScreen extends StatelessWidget {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${item.quantity} × ${item.name}'),
+                          Text(
+                            item.quantityAdjustedByStaff
+                                ? '${item.actualQuantity} × ${item.name} (ordered ${item.quantity})'
+                                : '${item.actualQuantity} × ${item.name}',
+                          ),
                           Text(formatCurrency(item.lineTotal)),
                         ],
                       ),

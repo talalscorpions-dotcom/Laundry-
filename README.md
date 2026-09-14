@@ -39,19 +39,20 @@ Real device geolocation, though, needs no API key and works today.
 
 The app opens on a **Sign in** screen (`lib/screens/auth/sign_in_screen.dart`);
 new users **Sign up** as a Customer, Laundry Partner, or Driver
-(`sign_up_screen.dart`) — Admin accounts aren't self-service, they're
-provisioned directly (see the seeded `admin@laundrygo.com` account in
-`lib/data/mock_data.dart`). Try it with the demo accounts printed on the
-sign-in screen (`aisha@example.com` / `sparkle@example.com` /
-`ali@example.com`, password `password123`; admin password `admin123`), or
-create a new account.
+(`sign_up_screen.dart`) — Admin and Staff accounts aren't self-service,
+they're provisioned directly (see the seeded `admin@laundrygo.com` and
+`staff@laundrygo.com` accounts in `lib/data/mock_data.dart`). Try it with the
+demo accounts printed on the sign-in screen (`aisha@example.com` /
+`sparkle@example.com` / `ali@example.com`, password `password123`; admin
+password `admin123`; staff password `staff123`), or create a new account.
 
 Every account has exactly one `role` (`lib/models/enums.dart`'s
 `UserRole`), and **routing middleware** — not each screen individually — is
 what enforces it:
 
 - `lib/routing/app_routes.dart` — the named top-level destinations
-  (`/sign-in`, `/sign-up`, `/customer`, `/partner`, `/driver`, `/admin`).
+  (`/sign-in`, `/sign-up`, `/customer`, `/partner`, `/driver`, `/admin`,
+  `/staff`).
 - `lib/routing/auth_middleware.dart` — `AuthMiddleware.resolve()`, wired in
   as `MaterialApp.onGenerateRoute` in `lib/main.dart`. Every top-level
   navigation passes through it before a screen is shown: signed-out visitors
@@ -127,26 +128,84 @@ New drivers (sign-up and the seeded demo accounts) default to being
 rostered for every slot, every day — otherwise every booking would look
 fully booked before anyone has ever visited the schedule screen.
 
-## The four panels
+## The order pipeline: Order → Bag → Item → Process
 
-All four are role-based flows inside **one app**, reached by signing in or
+Rather than a restaurant's simple "accept → deliver" flow, an order here is
+Order+Bag+Item+Process-centric, matching how a real laundry hub actually
+works — see the `OrderStatus` doc comment in `lib/models/enums.dart` for the
+full 13-state list and who normally drives each one. The shape of it:
+
+- **Item-level quantity, estimated vs. actual.** `OrderItem.quantity` is
+  what the customer estimated when placing the order; `actualQuantity` is
+  what hub staff count during inspection. Billing (`lineTotal`, and so the
+  order's `subtotal`/`total`) always follows `actualQuantity` — a recount
+  changes the price, and the customer sees why via the order's inspection
+  notes on their tracking screen.
+- **The bag.** A driver dropping items at the hub (`AppState.markDroppedOffAtHub`)
+  assigns the order a `bagId` — standing in for a real printed/scanned QR or
+  barcode tag (see "Known simplifications" below).
+- **Inspection.** Hub staff (`startInspection`/`recordInspection`) verify the
+  bag's contents against the order, adjust item counts, and can attach notes
+  and photos documenting pre-existing damage or a stain.
+- **Processing.** A separate `ProcessingStage` enum (received → sorting →
+  washing → drying → ironing → folding → packing) tracks the internal
+  wash/dry/iron pipeline while `OrderStatus` is `processing`, advanced one
+  stage at a time (`advanceProcessingStage`/`completeProcessing`) — kept
+  apart from `OrderStatus` so the customer-facing stepper doesn't need to
+  know about every internal hub step.
+- **Quality check.** `completeQualityCheck(passed: ...)` either sends the
+  order on to `readyForDelivery`, or back for rework at the `folding` stage
+  (not all the way back to washing) on a fail.
+- **OTP-confirmed delivery.** `markOutForDelivery` generates a short code the
+  customer sees on their tracking screen; the driver must collect it back
+  from them and call `confirmDelivery` to complete the order — a lightweight
+  stand-in for a real SMS/WhatsApp delivery OTP.
+
+### The Laundry Staff role
+
+A fifth `UserRole` (`staff`) represents the hub's own operations team —
+distinct from `partner` (who owns the shop/business relationship, accepts
+orders, and assigns drivers) and from `driver` (who only moves bags between
+addresses and the hub). Staff aren't self-service sign-up, same as admin
+(see the seeded `staff@laundrygo.com` account in `lib/data/mock_data.dart`).
+Their app (`lib/screens/staff/`) is a single working queue
+(`StaffQueueScreen`) of every order currently inside the hub across *all*
+partners, with a per-order workspace (`StaffOrderDetailScreen`) that walks
+each one through inspection → processing → quality check.
+
+### Admin operations dashboard
+
+Alongside the existing GMV/commission KPIs, the admin dashboard
+(`lib/screens/admin/admin_dashboard_screen.dart`) shows a live count of
+orders at every pipeline stage (new, pickup pending, at the hub, inspecting,
+processing, quality check, ready for delivery, out for delivery) — the kind
+of "what's stuck where right now" view a real ops team watches.
+
+## The five panels
+
+All five are role-based flows inside **one app**, reached by signing in or
 signing up as that role (see above):
 
 - **Customer app** (`lib/screens/customer/`) — browse partners, pick items
   from an itemized catalog (wash & fold / dry clean / ironing, priced per
   item), schedule a locked pickup window, choose a payment method, then
-  track the order (with a live-tracking map) through to delivery.
+  track the order (with a live-tracking map, bag/inspection details, and a
+  delivery OTP) through to delivery.
 - **Laundry Partner panel** (`lib/screens/partner/`) — see incoming orders,
-  accept them, move items through washing → ironing → ready, assign drivers
-  for pickup/delivery, and edit per-item pricing.
+  accept them, assign drivers for pickup/delivery, edit per-item pricing,
+  and watch (read-only) an order's progress once it's inside the hub, where
+  staff take over.
+- **Laundry Staff app** (`lib/screens/staff/`) — the hub ops team's queue:
+  inspect dropped-off bags, work orders through the wash/dry/iron pipeline,
+  and run the quality check before an order goes back out.
 - **Driver/Rider app** (`lib/screens/driver/`) — see assigned pickup/delivery
   tasks, a live route-tracking view, one-tap milestone updates (picked up /
-  out for delivery / delivered), and set a **weekly availability
-  schedule** (9 AM - 9 PM, in the same six windows a customer books from) on
-  the Schedule tab.
+  dropped off at hub / out for delivery / delivered via OTP), and set a
+  **weekly availability schedule** (9 AM - 9 PM, in the same six windows a
+  customer books from) on the Schedule tab.
 - **Admin panel** (`lib/screens/admin/`) — GMV and commission-revenue KPIs,
-  a directory of every partner/driver, every order in the system, and a
-  dispute queue with a resolve flow.
+  an operations pipeline view, a directory of every partner/driver, every
+  order in the system, and a dispute queue with a resolve flow.
 
 ## Architecture
 
@@ -219,12 +278,47 @@ locally with the commands above.
   backend; see `lib/utils/password_hash.dart`. Sign-up also doesn't verify
   email ownership.
 - **Seed accounts + whatever you sign up** — `lib/data/mock_data.dart` seeds
-  one customer, two partners, two drivers, and one admin, each with a login;
-  new sign-ups add more customers/partners/drivers at runtime, but nothing
-  persists across a restart.
+  one customer, two partners, two drivers, one admin, and one staff account,
+  each with a login; new sign-ups add more customers/partners/drivers at
+  runtime, but nothing persists across a restart.
 - **Delivery fee** is a flat constant (`kDeliveryFee` in
   `lib/utils/formatters.dart`) rather than a distance/demand-priced quote.
 - **Driver earnings** use a flat per-leg fee rather than a real payout
   engine.
 - **The live map** is a stylized straight-line animation, not a routed map —
   see `lib/widgets/live_tracking_map.dart` for the swap point.
+- **Bag tracking is a generated ID string**, not a real printed/scanned QR
+  or barcode label — `AppState.markDroppedOffAtHub` just stamps a `bagId`
+  onto the order.
+- **Inspection photos remember a file name only** (same caveat as the
+  sign-up document uploads on `DocumentPickerField`) — nothing is uploaded
+  to cloud storage.
+- **The delivery OTP isn't sent anywhere** — it's shown directly on the
+  customer's tracking screen instead of via a real SMS/WhatsApp message.
+- **Driver assignment is manual**, not score/route-optimized — a partner (for
+  pickup) or the ops flow (for delivery) picks from whoever's rostered and
+  free; there's no batching multiple orders onto one route, and no
+  Oman-specific delivery-zone modeling.
+
+### Deferred from the full PRD (future phases, not in this MVP)
+
+A detailed business-model document for this product additionally calls for
+several things intentionally **not** built yet, kept out to match this
+repo's "frontend MVP scaffold" scope:
+
+- A **subscription model** (Basic/Family/Premium recurring plans).
+- A **B2B flow** for hotels/offices (bulk accounts, invoicing).
+- **Zone-based routing and driver batching** (grouping multiple orders onto
+  one optimized route rather than one driver per leg).
+- **Real QR/barcode scanning** for bags (camera-based, not just a generated
+  ID string).
+- **Real SMS/WhatsApp delivery** of the OTP and other notifications (see
+  `lib/services/notification_service.dart`'s in-memory stand-in).
+- **Cloud photo storage** for inspection/damage documentation.
+- A **backend-driven ops KPI framework** (cost-per-completed-order and
+  similar metrics computed server-side over persisted historical data,
+  rather than the live in-memory counts on the admin dashboard today).
+
+Each of these fits behind the same "swap point" pattern already used for
+payments/location/notifications (`lib/services/`) and would be its own
+follow-up rather than a rewrite of what's here.

@@ -3,21 +3,32 @@ import 'address.dart';
 import 'enums.dart';
 
 class OrderItem {
-  const OrderItem({
+  OrderItem({
     required this.catalogItemId,
     required this.name,
     required this.serviceType,
     required this.quantity,
     required this.unitPrice,
-  });
+    int? actualQuantity,
+  }) : actualQuantity = actualQuantity ?? quantity;
 
   final String catalogItemId;
   final String name;
   final ServiceType serviceType;
+
+  /// What the customer estimated when placing the order.
   final int quantity;
   final double unitPrice;
 
-  double get lineTotal => unitPrice * quantity;
+  /// What staff actually counted during inspection (`AppState.recordInspection`).
+  /// Defaults to [quantity] until inspection overwrites it — billing always
+  /// follows this field, not the customer's estimate, so a recount changes
+  /// [lineTotal] (and the customer sees why, via [LaundryOrder.inspectionNotes]).
+  int actualQuantity;
+
+  bool get quantityAdjustedByStaff => actualQuantity != quantity;
+
+  double get lineTotal => unitPrice * actualQuantity;
 }
 
 class TimeSlot {
@@ -54,8 +65,15 @@ class LaundryOrder {
     this.deliveryFee = kDeliveryFee,
     DateTime? createdAt,
     List<String>? activityLog,
+    this.bagId,
+    this.processingStage,
+    List<String>? inspectionNotes,
+    List<String>? inspectionPhotoNames,
+    this.deliveryOtp,
   })  : createdAt = createdAt ?? DateTime.now(),
-        activityLog = activityLog ?? [];
+        activityLog = activityLog ?? [],
+        inspectionNotes = inspectionNotes ?? [],
+        inspectionPhotoNames = inspectionPhotoNames ?? [];
 
   final String id;
   final String customerId;
@@ -77,6 +95,31 @@ class LaundryOrder {
   final double deliveryFee;
   final DateTime createdAt;
   final List<String> activityLog;
+
+  /// Set once a driver drops the order at the hub (`AppState.markDroppedOffAtHub`)
+  /// — stands in for a real printed/scanned QR or barcode tag on the bag.
+  String? bagId;
+
+  /// Only meaningful while [status] is [OrderStatus.processing]; null before
+  /// and after (QC/ready/etc. don't track a wash-pipeline sub-stage).
+  ProcessingStage? processingStage;
+
+  /// Free-text notes staff add during inspection (e.g. "1 shirt missing a
+  /// button", "coffee stain, pre-treated") — shown to the customer alongside
+  /// any [quantity]/[actualQuantity] mismatch.
+  final List<String> inspectionNotes;
+
+  /// File names of photos staff attach during inspection to document
+  /// pre-existing damage. Demo-only: just remembers a name (see
+  /// `DocumentPickerField`'s caveat) — a real pipeline uploads to cloud
+  /// storage and stores URLs here instead.
+  final List<String> inspectionPhotoNames;
+
+  /// A short code generated when the order goes [OrderStatus.outForDelivery]
+  /// (`AppState.markOutForDelivery`) and given to the customer; the driver
+  /// must collect it back from them to confirm delivery
+  /// (`AppState.confirmDelivery`) instead of just tapping "delivered".
+  String? deliveryOtp;
 
   /// Value of the laundry service itself (what the commission is taken on).
   double get subtotal => items.fold(0, (sum, i) => sum + i.lineTotal);

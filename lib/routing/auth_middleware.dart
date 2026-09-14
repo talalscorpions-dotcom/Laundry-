@@ -8,6 +8,7 @@ import '../screens/auth/sign_up_screen.dart';
 import '../screens/customer/customer_shell.dart';
 import '../screens/driver/driver_shell.dart';
 import '../screens/partner/partner_shell.dart';
+import '../screens/staff/staff_shell.dart';
 import 'app_routes.dart';
 
 /// The RBAC gate for the whole app. Every top-level navigation (see
@@ -76,6 +77,8 @@ class AuthMiddleware {
         return const DriverShell();
       case AppRoutes.admin:
         return const AdminShell();
+      case AppRoutes.staff:
+        return const StaffShell();
       default:
         // Unreachable given resolve()'s checks above.
         return const SignInScreen();

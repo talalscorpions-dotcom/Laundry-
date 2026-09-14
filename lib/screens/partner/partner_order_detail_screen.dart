@@ -60,12 +60,19 @@ class PartnerOrderDetailScreen extends StatelessWidget {
                   Text('Items', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
                   for (final item in order.items)
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('${item.quantity} × ${item.name} (${item.serviceType.label})'),
-                        Text(formatCurrency(item.lineTotal)),
-                      ],
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            item.quantityAdjustedByStaff
+                                ? '${item.actualQuantity} × ${item.name} (${item.serviceType.label}) — ordered ${item.quantity}'
+                                : '${item.actualQuantity} × ${item.name} (${item.serviceType.label})',
+                          ),
+                          Text(formatCurrency(item.lineTotal)),
+                        ],
+                      ),
                     ),
                   const Divider(),
                   Row(
@@ -122,26 +129,21 @@ class PartnerOrderDetailScreen extends StatelessWidget {
       case OrderStatus.pickupAssigned:
         return [const Text('Waiting for the driver to collect the items from the customer.')];
       case OrderStatus.pickedUp:
+        return [const Text('Picked up — waiting for the driver to drop it off at the laundry hub.')];
+      case OrderStatus.atHub:
+        return [const Text('At the laundry hub — waiting for staff to start inspection.')];
+      case OrderStatus.inspecting:
+        return [const Text('Hub staff are inspecting the bag (verifying item counts, checking for damage).')];
+      case OrderStatus.processing:
         return [
-          ElevatedButton(
-            onPressed: () => appState.advanceProcessing(order.id, OrderStatus.washing),
-            child: const Text('Start washing'),
+          Text(
+            order.processingStage != null
+                ? 'Being processed by hub staff — currently ${order.processingStage!.label.toLowerCase()}.'
+                : 'Being processed by hub staff.',
           ),
         ];
-      case OrderStatus.washing:
-        return [
-          ElevatedButton(
-            onPressed: () => appState.advanceProcessing(order.id, OrderStatus.ironing),
-            child: const Text('Move to ironing'),
-          ),
-        ];
-      case OrderStatus.ironing:
-        return [
-          ElevatedButton(
-            onPressed: () => appState.advanceProcessing(order.id, OrderStatus.readyForDelivery),
-            child: const Text('Mark ready for delivery'),
-          ),
-        ];
+      case OrderStatus.qualityCheck:
+        return [const Text('Hub staff are running the quality check.')];
       case OrderStatus.readyForDelivery:
         final deliveryDrivers = appState.drivers.where((d) => d.isAvailable).toList();
         return [

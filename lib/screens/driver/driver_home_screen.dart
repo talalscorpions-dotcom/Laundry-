@@ -13,7 +13,10 @@ class DriverHomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final tasks = appState.ordersForDriver(appState.currentDriverId).where((o) {
-      final isPickupTask = o.pickupDriverId == appState.currentDriverId && o.status == OrderStatus.pickupAssigned;
+      // pickedUp stays a pickup task until the driver drops it at the hub —
+      // the task disappears once it's `atHub` and hands off to hub staff.
+      final isPickupTask = o.pickupDriverId == appState.currentDriverId &&
+          (o.status == OrderStatus.pickupAssigned || o.status == OrderStatus.pickedUp);
       final isDeliveryTask = o.deliveryDriverId == appState.currentDriverId &&
           (o.status == OrderStatus.deliveryAssigned || o.status == OrderStatus.outForDelivery);
       return isPickupTask || isDeliveryTask;
@@ -28,8 +31,8 @@ class DriverHomeScreen extends StatelessWidget {
               itemCount: tasks.length,
               itemBuilder: (context, index) {
                 final order = tasks[index];
-                final isPickup =
-                    order.pickupDriverId == appState.currentDriverId && order.status == OrderStatus.pickupAssigned;
+                final isPickup = order.pickupDriverId == appState.currentDriverId &&
+                    (order.status == OrderStatus.pickupAssigned || order.status == OrderStatus.pickedUp);
                 final partner = appState.partnerById(order.partnerId);
                 return Card(
                   child: ListTile(
