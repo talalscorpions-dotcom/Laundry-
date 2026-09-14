@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_state.dart';
+import '../../routing/app_routes.dart';
 import 'customer_home_screen.dart';
 import 'order_history_screen.dart';
 
@@ -21,7 +22,7 @@ class _CustomerShellState extends State<CustomerShell> {
     final pages = [
       const CustomerHomeScreen(),
       const OrderHistoryScreen(),
-      _CustomerProfileTab(customerName: appState.customer.name, phone: appState.customer.phone),
+      _CustomerProfileTab(customerName: appState.currentCustomer.name, phone: appState.currentCustomer.phone),
     ];
     return Scaffold(
       body: SafeArea(child: IndexedStack(index: _index, children: pages)),
@@ -70,8 +71,11 @@ class _CustomerProfileTab extends StatelessWidget {
         const Divider(),
         ListTile(
           leading: const Icon(Icons.logout),
-          title: const Text('Switch role / sign out'),
-          onTap: () => context.read<AppState>().signOut(),
+          title: const Text('Sign out'),
+          onTap: () {
+            context.read<AppState>().signOut();
+            Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+          },
         ),
       ],
     );

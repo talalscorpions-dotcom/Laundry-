@@ -35,8 +35,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    _pickupAddress ??= appState.customer.addresses.first;
-    _deliveryAddress ??= appState.customer.addresses.first;
+    _pickupAddress ??= appState.currentCustomer.addresses.first;
+    _deliveryAddress ??= appState.currentCustomer.addresses.first;
     final days = nextDays(4);
     final slots = slotsForDay(_selectedDay);
 
@@ -47,7 +47,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         children: [
           Text('Pickup address', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          for (final address in appState.customer.addresses)
+          for (final address in appState.currentCustomer.addresses)
             RadioListTile<Address>(
               contentPadding: EdgeInsets.zero,
               value: address,
@@ -107,7 +107,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           if (!_sameAddress) ...[
             Text('Delivery address', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
-            for (final address in appState.customer.addresses)
+            for (final address in appState.currentCustomer.addresses)
               RadioListTile<Address>(
                 contentPadding: EdgeInsets.zero,
                 value: address,

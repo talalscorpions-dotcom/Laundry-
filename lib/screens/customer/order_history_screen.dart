@@ -12,7 +12,7 @@ class OrderHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
-    final orders = appState.ordersForCustomer(appState.customer.id);
+    final orders = appState.ordersForCustomer(appState.currentCustomer.id);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Your orders')),

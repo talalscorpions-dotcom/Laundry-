@@ -2,47 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'data/app_state.dart';
-import 'models/enums.dart';
-import 'screens/admin/admin_shell.dart';
-import 'screens/customer/customer_shell.dart';
-import 'screens/driver/driver_shell.dart';
-import 'screens/partner/partner_shell.dart';
-import 'screens/role_select_screen.dart';
+import 'routing/app_routes.dart';
+import 'routing/auth_middleware.dart';
 import 'theme/app_theme.dart';
 
 void main() {
   runApp(const LaundryGoApp());
 }
 
-class LaundryGoApp extends StatelessWidget {
+class LaundryGoApp extends StatefulWidget {
   const LaundryGoApp({super.key});
 
   @override
+  State<LaundryGoApp> createState() => _LaundryGoAppState();
+}
+
+class _LaundryGoAppState extends State<LaundryGoApp> {
+  // Held directly (rather than only inside the Provider) so the routing
+  // middleware passed to onGenerateRoute can read it without needing a
+  // BuildContext of its own.
+  final AppState _appState = AppState();
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppState(),
+    return ChangeNotifierProvider<AppState>.value(
+      value: _appState,
       child: MaterialApp(
         title: 'LaundryGo',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        home: const _RootRouter(),
+        initialRoute: AppRoutes.root,
+        onGenerateRoute: (settings) => AuthMiddleware.resolve(settings, _appState),
       ),
     );
-  }
-}
-
-/// Routes to the right role's app based on who is "signed in" — the demo's
-/// stand-in for real authentication/session handling.
-class _RootRouter extends StatelessWidget {
-  const _RootRouter();
-
-  @override
-  Widget build(BuildContext context) {
-    final role = context.watch<AppState>().currentRole;
-    if (role == null) return const RoleSelectScreen();
-    if (role == UserRole.customer) return const CustomerShell();
-    if (role == UserRole.partner) return const PartnerShell();
-    if (role == UserRole.driver) return const DriverShell();
-    return const AdminShell();
   }
 }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../data/app_state.dart';
 import '../../models/enums.dart';
+import '../../routing/app_routes.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/stat_card.dart';
 
@@ -25,7 +26,13 @@ class AdminDashboardScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Admin dashboard'),
         actions: [
-          IconButton(icon: const Icon(Icons.logout), onPressed: () => context.read<AppState>().signOut()),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              context.read<AppState>().signOut();
+              Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+            },
+          ),
         ],
       ),
       body: ListView(

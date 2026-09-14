@@ -27,7 +27,7 @@ class CustomerHomeScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           sliver: SliverToBoxAdapter(
             child: Text(
-              'Laundry partners near ${appState.customer.addresses.first.city}',
+              'Laundry partners near ${appState.currentCustomer.addresses.first.city}',
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
@@ -58,7 +58,7 @@ class CustomerHomeScreen extends StatelessWidget {
   }
 
   void _showNotifications(BuildContext context, AppState appState) {
-    final feed = appState.notificationService.feedFor(appState.customer.id);
+    final feed = appState.notificationService.feedFor(appState.currentCustomer.id);
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(

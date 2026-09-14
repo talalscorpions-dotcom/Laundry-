@@ -16,6 +16,7 @@ class AdminOrderDetailScreen extends StatelessWidget {
     final appState = context.watch<AppState>();
     final order = appState.orders.firstWhere((o) => o.id == orderId);
     final partner = appState.partnerById(order.partnerId);
+    final customer = appState.customerById(order.customerId);
 
     return Scaffold(
       appBar: AppBar(title: Text(order.id)),
@@ -30,7 +31,7 @@ class AdminOrderDetailScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text('Customer: ${appState.customer.name}'),
+          Text('Customer: ${customer.name}'),
           const SizedBox(height: 8),
           Text('Items subtotal: ${formatCurrency(order.subtotal)}'),
           Text('Delivery fee: ${formatCurrency(order.deliveryFee)}'),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_state.dart';
+import '../../routing/app_routes.dart';
 import 'partner_dashboard_screen.dart';
 import 'partner_pricing_screen.dart';
 
@@ -66,8 +67,11 @@ class _PartnerProfileTab extends StatelessWidget {
         const Divider(),
         ListTile(
           leading: const Icon(Icons.logout),
-          title: const Text('Switch role / sign out'),
-          onTap: () => context.read<AppState>().signOut(),
+          title: const Text('Sign out'),
+          onTap: () {
+            context.read<AppState>().signOut();
+            Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+          },
         ),
       ],
     );

@@ -11,11 +11,48 @@ it runs standalone with no backend required.
 This started life as a module inside the `Aqary-` real-estate repo and now
 lives here as its own independent Flutter project/repo.
 
+## Auth & Role-Based Access Control (RBAC)
+
+The app opens on a **Sign in** screen (`lib/screens/auth/sign_in_screen.dart`);
+new users **Sign up** as a Customer, Laundry Partner, or Driver
+(`sign_up_screen.dart`) — Admin accounts aren't self-service, they're
+provisioned directly (see the seeded `admin@laundrygo.com` account in
+`lib/data/mock_data.dart`). Try it with the demo accounts printed on the
+sign-in screen (`aisha@example.com` / `sparkle@example.com` /
+`ali@example.com`, password `password123`; admin password `admin123`), or
+create a new account.
+
+Every account has exactly one `role` (`lib/models/enums.dart`'s
+`UserRole`), and **routing middleware** — not each screen individually — is
+what enforces it:
+
+- `lib/routing/app_routes.dart` — the named top-level destinations
+  (`/sign-in`, `/sign-up`, `/customer`, `/partner`, `/driver`, `/admin`).
+- `lib/routing/auth_middleware.dart` — `AuthMiddleware.resolve()`, wired in
+  as `MaterialApp.onGenerateRoute` in `lib/main.dart`. Every top-level
+  navigation passes through it before a screen is shown: signed-out visitors
+  asking for a role's shell are redirected to sign-in; a signed-in user
+  asking for the *wrong* role's shell (a driver deep-linking to `/admin`,
+  say) is redirected to their **own** shell instead of an access-denied
+  page. It's the same idea a real backend expresses server-side — API
+  middleware checking a JWT's role claim before handling a request — just
+  enforced client-side over the in-memory session in `AppState.currentAccount`.
+
+Screens pushed *within* an already-approved shell (catalog, cart, order
+detail, ...) still use plain unnamed `Navigator.push`, since they're already
+behind a route the middleware approved — the middleware only needs to guard
+the handful of top-level entry points.
+
+Passwords are hashed (not stored/compared as plaintext) even in this
+in-memory demo — see the big warning comment in
+`lib/utils/password_hash.dart` about what a real backend must do instead
+(hash server-side with bcrypt/argon2/scrypt; never trust a client-side
+check like this one in production).
+
 ## The four panels
 
-All four are role-based flows inside **one app** — pick a role on the
-launch screen to demo that side (`lib/screens/role_select_screen.dart`
-stands in for real authentication):
+All four are role-based flows inside **one app**, reached by signing in or
+signing up as that role (see above):
 
 - **Customer app** (`lib/screens/customer/`) — browse partners, pick items
   from an itemized catalog (wash & fold / dry clean / ironing, priced per
@@ -67,7 +104,6 @@ native `android/`/`ios/`/`macos/`/`windows`/`linux` runner projects (they're
 generated, not hand-written). To run it:
 
 ```bash
-cd laundry_app
 flutter create . --platforms=android,ios,web   # generates the missing runner projects
 flutter pub get
 flutter run                                     # or: flutter run -d chrome
@@ -81,10 +117,14 @@ flutter test
 
 ## Known simplifications (by design, for an MVP)
 
-- **Auth** — role selection stands in for real sign-in/sign-up and sessions.
-- **One customer, two partners, two drivers** — seeded in
-  `lib/data/mock_data.dart`; there's no persistence, so state resets on
-  restart.
+- **Auth is in-memory, client-side, and unpersisted** — real sessions
+  (tokens, refresh, "remember me") and password hashing must move to a real
+  backend; see `lib/utils/password_hash.dart`. Sign-up also doesn't verify
+  email ownership.
+- **Seed accounts + whatever you sign up** — `lib/data/mock_data.dart` seeds
+  one customer, two partners, two drivers, and one admin, each with a login;
+  new sign-ups add more customers/partners/drivers at runtime, but nothing
+  persists across a restart.
 - **Delivery fee** is a flat constant (`kDeliveryFee` in
   `lib/utils/formatters.dart`) rather than a distance/demand-priced quote.
 - **Driver earnings** use a flat per-leg fee rather than a real payout

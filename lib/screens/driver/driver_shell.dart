@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_state.dart';
+import '../../routing/app_routes.dart';
 import 'driver_earnings_screen.dart';
 import 'driver_home_screen.dart';
 
@@ -63,8 +64,11 @@ class _DriverProfileTab extends StatelessWidget {
         const Divider(),
         ListTile(
           leading: const Icon(Icons.logout),
-          title: const Text('Switch role / sign out'),
-          onTap: () => context.read<AppState>().signOut(),
+          title: const Text('Sign out'),
+          onTap: () {
+            context.read<AppState>().signOut();
+            Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+          },
         ),
       ],
     );

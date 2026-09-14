@@ -1,33 +1,41 @@
+import '../models/account.dart';
 import '../models/address.dart';
 import '../models/catalog.dart';
 import '../models/enums.dart';
 import '../models/user_models.dart';
+import '../utils/password_hash.dart';
 
 /// Seed data for the demo — one customer, two partners with itemized
-/// catalogs, and two drivers. Swap this module out for real API-backed
-/// repositories when connecting a backend.
+/// catalogs, two drivers, one admin, and a login [Account] for each so the
+/// sign-in screen has demo credentials to try. Swap this module out for
+/// real API-backed repositories when connecting a backend.
 class MockData {
-  static const Customer customer = Customer(
-    id: 'cust-1',
-    name: 'Aisha Al Balushi',
-    phone: '+968 9123 4567',
-    addresses: [
-      Address(
-        id: 'addr-home',
-        label: 'Home',
-        line1: 'Way 2812, Al Khuwair',
-        city: 'Muscat',
-        location: GeoPoint(23.588, 58.407),
-      ),
-      Address(
-        id: 'addr-work',
-        label: 'Office',
-        line1: 'CBD Area, Building 14',
-        city: 'Muscat',
-        location: GeoPoint(23.598, 58.418),
-      ),
-    ],
-  );
+  static const _demoPassword = 'password123';
+  static const _adminPassword = 'admin123';
+
+  static final List<Customer> customers = [
+    const Customer(
+      id: 'cust-1',
+      name: 'Aisha Al Balushi',
+      phone: '+968 9123 4567',
+      addresses: [
+        Address(
+          id: 'addr-home',
+          label: 'Home',
+          line1: 'Way 2812, Al Khuwair',
+          city: 'Muscat',
+          location: GeoPoint(23.588, 58.407),
+        ),
+        Address(
+          id: 'addr-work',
+          label: 'Office',
+          line1: 'CBD Area, Building 14',
+          city: 'Muscat',
+          location: GeoPoint(23.598, 58.418),
+        ),
+      ],
+    ),
+  ];
 
   static final List<LaundryPartner> partners = [
     // Not `const`: catalog prices are edited in place at runtime
@@ -85,6 +93,40 @@ class MockData {
       rating: 4.6,
       isAvailable: true,
       location: const GeoPoint(23.605, 58.460),
+    ),
+  ];
+
+  static final List<Account> accounts = [
+    Account(
+      id: 'acct-admin',
+      name: 'Platform Admin',
+      email: 'admin@laundrygo.com',
+      passwordHash: hashPasswordForDemo(_adminPassword),
+      role: UserRole.admin,
+    ),
+    Account(
+      id: 'acct-cust-1',
+      name: customers.first.name,
+      email: 'aisha@example.com',
+      passwordHash: hashPasswordForDemo(_demoPassword),
+      role: UserRole.customer,
+      linkedId: customers.first.id,
+    ),
+    Account(
+      id: 'acct-partner-1',
+      name: partners[0].name,
+      email: 'sparkle@example.com',
+      passwordHash: hashPasswordForDemo(_demoPassword),
+      role: UserRole.partner,
+      linkedId: partners[0].id,
+    ),
+    Account(
+      id: 'acct-driver-1',
+      name: drivers[0].name,
+      email: 'ali@example.com',
+      passwordHash: hashPasswordForDemo(_demoPassword),
+      role: UserRole.driver,
+      linkedId: drivers[0].id,
     ),
   ];
 }
