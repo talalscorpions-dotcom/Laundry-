@@ -42,3 +42,17 @@ android {
 flutter {
     source = "../.."
 }
+
+// file_picker 11.0.3 pulls in androidx.core:core(-ktx):1.15.0, which
+// requires compiling against Android API 35 (an AAR-metadata check, not an
+// AGP/platform compatibility issue). Our compileSdk is 34 (Flutter 3.24.3's
+// default; AGP 8.1.0, as declared in settings.gradle, doesn't officially
+// support 35 either). Force the transitive dependency down to a version
+// that only requires API 34, rather than chasing AGP/compileSdk bumps this
+// project's other pinned versions weren't tested against.
+configurations.all {
+    resolutionStrategy {
+        force "androidx.core:core:1.13.1"
+        force "androidx.core:core-ktx:1.13.1"
+    }
+}
