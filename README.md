@@ -82,8 +82,10 @@ could reset that account's password).
 Each driver sets a **weekly recurring schedule** — which of the six 9 AM-9 PM
 windows (`kSlotWindows` in `lib/utils/scheduling.dart`) they work, per day
 of the week — on the Driver app's **Schedule** tab
-(`lib/screens/driver/driver_schedule_screen.dart`). This is what makes a
-pickup slot "fully booked":
+(`lib/screens/driver/driver_schedule_screen.dart`). Edits build up in a
+local draft; nothing is saved until "Confirm and save schedule" is tapped
+(`AppState.setDriverWeeklyAvailability`). This is what makes a pickup slot
+"fully booked":
 
 - `AppState.isSlotFullyBooked(slot)` — true once every driver rostered for
   that weekday/window already has an order booked into it. The customer's

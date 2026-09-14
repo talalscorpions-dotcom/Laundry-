@@ -316,6 +316,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replaces [driverId]'s entire weekly schedule at once with [availability]
+  /// (weekday -> the set of slot indices rostered that day). Called once,
+  /// from the "Confirm schedule" button, after the driver has finished
+  /// editing a local draft — see [setDriverSlotAvailability] for the
+  /// single-slot version other callers (and tests) use.
+  void setDriverWeeklyAvailability(String driverId, Map<int, Set<int>> availability) {
+    final driver = driverById(driverId);
+    if (driver == null) return;
+    driver.weeklyAvailability
+      ..clear()
+      ..addAll({for (final entry in availability.entries) entry.key: Set.of(entry.value)});
+    notifyListeners();
+  }
+
   /// How many drivers are, per their weekly schedule, rostered for the
   /// window [slot] falls in (matched by weekday + start hour) — regardless
   /// of whether they're already covering an order in it.
