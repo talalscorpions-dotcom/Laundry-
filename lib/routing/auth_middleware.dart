@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/app_state.dart';
 import '../screens/admin/admin_shell.dart';
+import '../screens/auth/forgot_password_screen.dart';
 import '../screens/auth/sign_in_screen.dart';
 import '../screens/auth/sign_up_screen.dart';
 import '../screens/customer/customer_shell.dart';
@@ -35,8 +36,8 @@ class AuthMiddleware {
       return _routeTo(role == null ? AppRoutes.signIn : AppRoutes.forRole(role), settings);
     }
 
-    if (name == AppRoutes.signIn || name == AppRoutes.signUp) {
-      // Already signed in: no reason to show a sign-in/sign-up form.
+    if (AppRoutes.isPublicOnly(name)) {
+      // Already signed in: no reason to show a sign-in/sign-up/reset form.
       if (role != null) return _routeTo(AppRoutes.forRole(role), settings);
       return _routeTo(name, settings);
     }
@@ -65,6 +66,8 @@ class AuthMiddleware {
         return const SignInScreen();
       case AppRoutes.signUp:
         return const SignUpScreen();
+      case AppRoutes.forgotPassword:
+        return const ForgotPasswordScreen();
       case AppRoutes.customer:
         return const CustomerShell();
       case AppRoutes.partner:

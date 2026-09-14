@@ -11,10 +11,15 @@ class AppRoutes {
   static const root = '/';
   static const signIn = '/sign-in';
   static const signUp = '/sign-up';
+  static const forgotPassword = '/forgot-password';
   static const customer = '/customer';
   static const partner = '/partner';
   static const driver = '/driver';
   static const admin = '/admin';
+
+  /// Routes reachable only while signed out — visiting one while already
+  /// signed in redirects to the caller's own role shell instead.
+  static bool isPublicOnly(String name) => name == signIn || name == signUp || name == forgotPassword;
 
   static String forRole(UserRole role) {
     switch (role) {

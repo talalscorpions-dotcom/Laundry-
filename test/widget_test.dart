@@ -80,4 +80,35 @@ void main() {
     expect(find.text('Tasks'), findsOneWidget);
     expect(find.text('Browse'), findsNothing);
   });
+
+  testWidgets('Forgot password resets a demo account and the new password signs in', (WidgetTester tester) async {
+    await tester.pumpWidget(const LaundryGoApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Forgot password?'));
+    await tester.pumpAndSettle();
+
+    await _fillField(tester, 'Email', 'aisha@example.com');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Continue'));
+    await tester.pumpAndSettle();
+
+    await _fillField(tester, 'New password', 'newpassword1');
+    await _fillField(tester, 'Confirm new password', 'newpassword1');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reset password'));
+    await tester.pumpAndSettle();
+
+    // Back on sign-in; the old password should no longer work...
+    await _fillField(tester, 'Email', 'aisha@example.com');
+    await _fillField(tester, 'Password', 'password123');
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Incorrect email or password.'), findsOneWidget);
+
+    // ...but the new one does.
+    await _fillField(tester, 'Password', 'newpassword1');
+    await tester.tap(find.text('Sign in'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Browse'), findsOneWidget);
+  });
 }

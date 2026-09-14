@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../data/app_state.dart';
+import '../../models/enums.dart';
 
 /// "Oversee all users" — a simple customer/partner/driver directory. A
 /// production build would add suspend/verify actions backed by real
@@ -75,7 +76,14 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                     '${partner.area} • ${appState.ordersForPartner(partner.id).length} orders • '
                     '${(partner.commissionRate * 100).toStringAsFixed(0)}% commission',
                   ),
-                  trailing: Text(partner.isOpen ? 'Open' : 'Closed'),
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(partner.isOpen ? 'Open' : 'Closed'),
+                      _VerificationLabel(status: partner.verificationStatus),
+                    ],
+                  ),
                 ),
               ),
           ],
@@ -90,11 +98,34 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   leading: const Icon(Icons.two_wheeler),
                   title: Text(driver.name),
                   subtitle: Text('${driver.vehicle} • ★ ${driver.rating.toStringAsFixed(1)}'),
-                  trailing: Text(driver.isAvailable ? 'Available' : 'Busy'),
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(driver.isAvailable ? 'Available' : 'Busy'),
+                      _VerificationLabel(status: driver.verificationStatus),
+                    ],
+                  ),
                 ),
               ),
           ],
         );
     }
+  }
+}
+
+class _VerificationLabel extends StatelessWidget {
+  const _VerificationLabel({required this.status});
+
+  final VerificationStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      VerificationStatus.verified => Colors.green,
+      VerificationStatus.pending => Colors.orange,
+      VerificationStatus.rejected => Colors.red,
+    };
+    return Text(status.label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600));
   }
 }

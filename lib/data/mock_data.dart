@@ -44,11 +44,13 @@ class MockData {
     LaundryPartner(
       id: 'partner-1',
       name: 'Sparkle Laundry',
+      phone: '+968 2444 5566',
       area: 'Al Khuwair',
       location: const GeoPoint(23.590, 58.410),
       rating: 4.7,
       isOpen: true,
       commissionRate: 0.20,
+      verificationStatus: VerificationStatus.verified,
       catalog: [
         const CatalogItem(id: 'p1-shirt-wf', partnerId: 'partner-1', name: 'Shirt', serviceType: ServiceType.washFold, price: 0.600),
         const CatalogItem(id: 'p1-shirt-iron', partnerId: 'partner-1', name: 'Shirt', serviceType: ServiceType.ironing, price: 0.400),
@@ -61,11 +63,13 @@ class MockData {
     LaundryPartner(
       id: 'partner-2',
       name: 'CleanCare Express',
+      phone: '+968 2444 7788',
       area: 'Qurum',
       location: const GeoPoint(23.610, 58.470),
       rating: 4.5,
       isOpen: true,
       commissionRate: 0.18,
+      verificationStatus: VerificationStatus.verified,
       catalog: [
         const CatalogItem(id: 'p2-shirt-wf', partnerId: 'partner-2', name: 'Shirt', serviceType: ServiceType.washFold, price: 0.550),
         const CatalogItem(id: 'p2-trouser-dc', partnerId: 'partner-2', name: 'Trousers', serviceType: ServiceType.dryClean, price: 1.800),
@@ -84,6 +88,7 @@ class MockData {
       rating: 4.9,
       isAvailable: true,
       location: const GeoPoint(23.592, 58.412),
+      verificationStatus: VerificationStatus.verified,
     ),
     Driver(
       id: 'driver-2',
@@ -93,6 +98,7 @@ class MockData {
       rating: 4.6,
       isAvailable: true,
       location: const GeoPoint(23.605, 58.460),
+      verificationStatus: VerificationStatus.verified,
     ),
   ];
 

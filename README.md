@@ -49,6 +49,34 @@ in-memory demo — see the big warning comment in
 (hash server-side with bcrypt/argon2/scrypt; never trust a client-side
 check like this one in production).
 
+**Sign-up collects, per role:**
+
+- **Every role**: name, email (also used as the sign-in username), password,
+  and phone number.
+- **Customer**: a pickup address + city.
+- **Laundry Partner**: an area/neighbourhood, plus two required document
+  uploads — an owner **ID** and a **Commercial Registration**
+  (`lib/widgets/document_picker_field.dart`).
+- **Driver**: vehicle details, plus two required document uploads — a
+  **Residential ID** and a **Driver's Licence**.
+
+New partner/driver accounts start `VerificationStatus.pending` (shown on the
+Admin → Users screen); the pre-seeded demo partners/drivers are already
+`verified`. Document upload only remembers the picked file's *name* — see
+the caveat on `DocumentPickerField` for what a real KYC/onboarding pipeline
+needs to do instead (upload to secure storage, route to a human or
+automated review that's what should flip the status to verified/rejected —
+nothing in this demo does that yet).
+
+**Forgot password** (`lib/screens/auth/forgot_password_screen.dart`, linked
+from the sign-in screen): a two-step reset — confirm the account's email,
+then set a new password. This demo has no email service, so it skips
+straight from "email exists" to "set a new password" instead of requiring
+a token from an emailed reset link first; see the warning on
+`AppState.resetPassword` for why that shortcut is demo-only and must not
+ship to production (as written, anyone who knows an email on the platform
+could reset that account's password).
+
 ## The four panels
 
 All four are role-based flows inside **one app**, reached by signing in or

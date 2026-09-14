@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../data/app_state.dart';
 import '../../models/enums.dart';
 import '../../routing/app_routes.dart';
+import '../../widgets/document_picker_field.dart';
 import '../../widgets/error_banner.dart';
 
 /// Public route (see `AuthMiddleware`) — registers a new account as a
@@ -29,6 +30,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
   UserRole _role = UserRole.customer;
   bool _obscure = true;
   String? _error;
+
+  // Populated by DocumentPickerField.onSaved when the form is saved.
+  String? _idDocumentName;
+  String? _commercialRegistrationDocumentName;
+  String? _residentialIdDocumentName;
+  String? _driverLicenseDocumentName;
 
   @override
   void dispose() {
@@ -98,7 +105,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined)),
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        helperText: 'This is also your username for signing in.',
+                        prefixIcon: Icon(Icons.email_outlined),
+                      ),
                       validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
                     ),
                     const SizedBox(height: 12),
@@ -115,15 +126,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       validator: (v) => (v == null || v.length < 6) ? 'At least 6 characters' : null,
                     ),
-                    if (_role == UserRole.customer || _role == UserRole.driver) ...[
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: 'Phone', prefixIcon: Icon(Icons.phone_outlined)),
-                        validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                      ),
-                    ],
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Phone', prefixIcon: Icon(Icons.phone_outlined)),
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    ),
                     if (_role == UserRole.customer) ...[
                       const SizedBox(height: 12),
                       TextFormField(
@@ -149,6 +158,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                         validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                       ),
+                      const SizedBox(height: 12),
+                      Text('Business verification', style: Theme.of(context).textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      DocumentPickerField(
+                        label: 'Owner ID',
+                        icon: Icons.badge_outlined,
+                        onSaved: (v) => _idDocumentName = v,
+                        validator: (v) => v == null ? 'Upload an ID document' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      DocumentPickerField(
+                        label: 'Commercial Registration',
+                        icon: Icons.description_outlined,
+                        onSaved: (v) => _commercialRegistrationDocumentName = v,
+                        validator: (v) => v == null ? 'Upload your Commercial Registration' : null,
+                      ),
                     ],
                     if (_role == UserRole.driver) ...[
                       const SizedBox(height: 12),
@@ -159,6 +184,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           prefixIcon: Icon(Icons.two_wheeler_outlined),
                         ),
                         validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      Text('Driver verification', style: Theme.of(context).textTheme.labelLarge),
+                      const SizedBox(height: 8),
+                      DocumentPickerField(
+                        label: 'Residential ID',
+                        icon: Icons.badge_outlined,
+                        onSaved: (v) => _residentialIdDocumentName = v,
+                        validator: (v) => v == null ? 'Upload your Residential ID' : null,
+                      ),
+                      const SizedBox(height: 12),
+                      DocumentPickerField(
+                        label: "Driver's Licence",
+                        icon: Icons.motorcycle_outlined,
+                        onSaved: (v) => _driverLicenseDocumentName = v,
+                        validator: (v) => v == null ? "Upload your Driver's Licence" : null,
                       ),
                     ],
                     const SizedBox(height: 20),
@@ -180,6 +221,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
     final appState = context.read<AppState>();
     final result = appState.signUp(
       name: _nameController.text,
@@ -191,6 +233,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
       vehicle: _vehicleController.text,
       addressLine: _addressController.text,
       city: _cityController.text,
+      idDocumentName: _idDocumentName,
+      commercialRegistrationDocumentName: _commercialRegistrationDocumentName,
+      residentialIdDocumentName: _residentialIdDocumentName,
+      driverLicenseDocumentName: _driverLicenseDocumentName,
     );
     if (!result.isSuccess) {
       setState(() => _error = result.error);

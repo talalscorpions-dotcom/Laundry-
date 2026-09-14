@@ -76,7 +76,14 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       validator: (v) => (v == null || v.isEmpty) ? 'Enter your password' : null,
                     ),
-                    const SizedBox(height: 20),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pushNamed(AppRoutes.forgotPassword),
+                        child: const Text('Forgot password?'),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     ElevatedButton(onPressed: _submit, child: const Text('Sign in')),
                     const SizedBox(height: 12),
                     TextButton(

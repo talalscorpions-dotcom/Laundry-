@@ -27,6 +27,13 @@ enum PaymentStatus { pending, paid, failed, refunded }
 
 enum DisputeStatus { open, resolved }
 
+/// KYC/onboarding document review status for Partner and Driver accounts —
+/// set to `pending` the moment they sign up and submit documents. Nothing
+/// in this demo currently flips it to `verified`/`rejected`; a real backend
+/// would do that once a human (or an ID-verification vendor) reviews the
+/// uploaded documents.
+enum VerificationStatus { pending, verified, rejected }
+
 extension OrderStatusX on OrderStatus {
   String get label {
     switch (this) {
@@ -82,6 +89,19 @@ extension PaymentMethodX on PaymentMethod {
         return 'Digital Wallet';
       case PaymentMethod.cashOnDelivery:
         return 'Cash on Delivery';
+    }
+  }
+}
+
+extension VerificationStatusX on VerificationStatus {
+  String get label {
+    switch (this) {
+      case VerificationStatus.pending:
+        return 'Pending verification';
+      case VerificationStatus.verified:
+        return 'Verified';
+      case VerificationStatus.rejected:
+        return 'Rejected';
     }
   }
 }

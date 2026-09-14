@@ -73,14 +73,24 @@ class AppState extends ChangeNotifier {
     required String email,
     required String password,
     required UserRole role,
-    String? phone,
+    required String phone,
     String? area,
     String? vehicle,
     String? addressLine,
     String? city,
+    // Required for partner sign-up (an "ID" + a Commercial Registration)
+    // and driver sign-up (a Residential ID + a Driver's Licence). These are
+    // just the *file names* the user picked — see the caveat on
+    // DocumentPickerField about what this demo does (and doesn't do) with
+    // them.
+    String? idDocumentName,
+    String? commercialRegistrationDocumentName,
+    String? residentialIdDocumentName,
+    String? driverLicenseDocumentName,
   }) {
     final trimmedName = name.trim();
     final normalizedEmail = email.trim().toLowerCase();
+    final trimmedPhone = phone.trim();
 
     if (role == UserRole.admin) {
       return const AuthResult.failure('Admin accounts cannot self-register — contact an existing admin.');
@@ -90,6 +100,9 @@ class AppState extends ChangeNotifier {
     }
     if (!normalizedEmail.contains('@')) {
       return const AuthResult.failure('Enter a valid email address.');
+    }
+    if (trimmedPhone.isEmpty) {
+      return const AuthResult.failure('Enter your phone number.');
     }
     if (password.length < 6) {
       return const AuthResult.failure('Password must be at least 6 characters.');
@@ -108,7 +121,7 @@ class AppState extends ChangeNotifier {
         customers.add(Customer(
           id: linkedId,
           name: trimmedName,
-          phone: (phone ?? '').trim(),
+          phone: trimmedPhone,
           addresses: [
             Address(
               id: '$linkedId-addr-1',
@@ -126,10 +139,17 @@ class AppState extends ChangeNotifier {
         if ((area ?? '').trim().isEmpty) {
           return const AuthResult.failure('Enter your shop\'s area.');
         }
+        if ((idDocumentName ?? '').trim().isEmpty) {
+          return const AuthResult.failure('Upload an ID document.');
+        }
+        if ((commercialRegistrationDocumentName ?? '').trim().isEmpty) {
+          return const AuthResult.failure('Upload your Commercial Registration.');
+        }
         linkedId = 'partner-${_partnerSeq++}-${DateTime.now().millisecondsSinceEpoch}';
         partners.add(LaundryPartner(
           id: linkedId,
           name: trimmedName,
+          phone: trimmedPhone,
           area: area!.trim(),
           // Placeholder — a real onboarding flow would collect a pinned
           // shop location.
@@ -138,21 +158,31 @@ class AppState extends ChangeNotifier {
           isOpen: true,
           commissionRate: 0.20,
           catalog: const [],
+          idDocumentName: idDocumentName!.trim(),
+          commercialRegistrationDocumentName: commercialRegistrationDocumentName!.trim(),
         ));
         break;
       case UserRole.driver:
         if ((vehicle ?? '').trim().isEmpty) {
           return const AuthResult.failure('Enter your vehicle details.');
         }
+        if ((residentialIdDocumentName ?? '').trim().isEmpty) {
+          return const AuthResult.failure('Upload your Residential ID.');
+        }
+        if ((driverLicenseDocumentName ?? '').trim().isEmpty) {
+          return const AuthResult.failure('Upload your Driver\'s Licence.');
+        }
         linkedId = 'driver-${_driverSeq++}-${DateTime.now().millisecondsSinceEpoch}';
         drivers.add(Driver(
           id: linkedId,
           name: trimmedName,
-          phone: (phone ?? '').trim(),
+          phone: trimmedPhone,
           vehicle: vehicle!.trim(),
           rating: 5.0,
           isAvailable: true,
           location: const GeoPoint(23.590, 58.410),
+          residentialIdDocumentName: residentialIdDocumentName!.trim(),
+          driverLicenseDocumentName: driverLicenseDocumentName!.trim(),
         ));
         break;
       case UserRole.admin:
@@ -191,6 +221,45 @@ class AppState extends ChangeNotifier {
   void signOut() {
     currentAccount = null;
     notifyListeners();
+  }
+
+  /// Whether an account exists for [email] — used by the forgot-password
+  /// flow to check before offering to reset a password.
+  bool accountExistsForEmail(String email) {
+    final normalizedEmail = email.trim().toLowerCase();
+    return _accounts.any((a) => a.email == normalizedEmail);
+  }
+
+  /// Sets a new password for the account with [email].
+  ///
+  /// A real "forgot password" flow verifies ownership of the email first —
+  /// a reset link (with a short-lived, single-use token) sent to that
+  /// address, or a code — before ever accepting a new password. This demo
+  /// has no email service to send that link through, so it skips straight
+  /// to setting the new password once the email is known to exist. Do not
+  /// ship that shortcut: it lets anyone who knows an email address reset
+  /// that account's password.
+  AuthResult resetPassword({required String email, required String newPassword}) {
+    final normalizedEmail = email.trim().toLowerCase();
+    final index = _accounts.indexWhere((a) => a.email == normalizedEmail);
+    if (index == -1) {
+      return const AuthResult.failure('No account found for that email.');
+    }
+    if (newPassword.length < 6) {
+      return const AuthResult.failure('Password must be at least 6 characters.');
+    }
+    final existing = _accounts[index];
+    final updated = Account(
+      id: existing.id,
+      name: existing.name,
+      email: existing.email,
+      passwordHash: hashPasswordForDemo(newPassword),
+      role: existing.role,
+      linkedId: existing.linkedId,
+    );
+    _accounts[index] = updated;
+    notifyListeners();
+    return AuthResult.success(updated);
   }
 
   Customer customerById(String id) => customers.firstWhere((c) => c.id == id);
