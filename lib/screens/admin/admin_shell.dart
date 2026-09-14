@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../data/app_state.dart';
+import '../../routing/app_routes.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_disputes_screen.dart';
 import 'admin_orders_screen.dart';
@@ -22,6 +25,7 @@ class _AdminShellState extends State<AdminShell> {
       AdminOrdersScreen(),
       AdminUsersScreen(),
       AdminDisputesScreen(),
+      _AdminProfileTab(),
     ];
     return Scaffold(
       body: SafeArea(child: IndexedStack(index: _index, children: pages)),
@@ -49,8 +53,45 @@ class _AdminShellState extends State<AdminShell> {
             selectedIcon: Icon(Icons.gavel),
             label: 'Disputes',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Same sign-out pattern every other role's shell uses (customer/partner/
+/// driver/staff) — a Profile tab that's always reachable from the bottom
+/// nav, rather than a one-off icon tucked into a single tab's AppBar.
+class _AdminProfileTab extends StatelessWidget {
+  const _AdminProfileTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final account = context.watch<AppState>().currentAccount!;
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const SizedBox(height: 12),
+        CircleAvatar(radius: 36, child: Text(account.name.substring(0, 1))),
+        const SizedBox(height: 12),
+        Center(child: Text(account.name, style: Theme.of(context).textTheme.titleLarge)),
+        Center(child: Text(account.email, style: Theme.of(context).textTheme.bodyMedium)),
+        const SizedBox(height: 24),
+        const Divider(),
+        ListTile(
+          leading: const Icon(Icons.logout),
+          title: const Text('Sign out'),
+          onTap: () {
+            context.read<AppState>().signOut();
+            Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+          },
+        ),
+      ],
     );
   }
 }

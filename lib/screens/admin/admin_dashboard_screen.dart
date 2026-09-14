@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../data/app_state.dart';
 import '../../models/enums.dart';
-import '../../routing/app_routes.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/stat_card.dart';
 
@@ -23,18 +22,7 @@ class AdminDashboardScreen extends StatelessWidget {
     final topPartners = revenueByPartner.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              context.read<AppState>().signOut();
-              Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Admin dashboard')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
