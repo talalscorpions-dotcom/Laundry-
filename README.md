@@ -127,14 +127,15 @@ signing up as that role (see above):
 
 ## Running it
 
-This scaffold ships `lib/`, `pubspec.yaml`, and a `web/` folder, but not the
-native `android/`/`ios/`/`macos/`/`windows`/`linux` runner projects (they're
-generated, not hand-written). To run it:
-
 ```bash
-flutter create . --platforms=android,ios,web   # generates the missing runner projects
 flutter pub get
-flutter run                                     # or: flutter run -d chrome
+flutter run                # picks a connected device/simulator, or:
+flutter run -d chrome      # web
+flutter build apk          # Android
+flutter build ios          # iOS (needs a Mac + Xcode)
+flutter build macos        # macOS (needs a Mac + Xcode)
+flutter build windows      # Windows (needs Windows + Visual Studio)
+flutter build linux        # Linux (needs libgtk-3-dev)
 ```
 
 Run the smoke tests with:
@@ -142,6 +143,22 @@ Run the smoke tests with:
 ```bash
 flutter test
 ```
+
+## Continuous Integration
+
+Three GitHub Actions workflows run on every push/PR to `main`
+(`.github/workflows/`):
+
+- **`web-build.yml`** — analyze, test, `flutter build web --release`, then
+  deploy to GitHub Pages on pushes to `main`:
+  https://talalscorpions-dotcom.github.io/Laundry-/
+- **`android-build.yml`** — analyze, test, then builds a release APK and App
+  Bundle.
+- **`ios-build.yml`** — analyze, test, then builds an unsigned iOS
+  simulator app (no Apple Developer account needed for CI).
+
+macOS/Windows/Linux desktop builds aren't wired into CI yet; run them
+locally with the commands above.
 
 ## Known simplifications (by design, for an MVP)
 

@@ -1,0 +1,60 @@
+name: Android Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.3'
+          cache: true
+
+      - name: Configure Gradle
+        run: |
+          mkdir -p ~/.gradle
+          cat > ~/.gradle/gradle.properties << EOF
+          org.gradle.jvmargs=-Xmx2048m -XX:+UseG1GC
+          org.gradle.parallel=true
+          org.gradle.workers.max=4
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+          flutter config --enable-android
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Build Android App Bundle
+        run: flutter build appbundle --release
+
+      - name: Upload Android build
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: build/app/outputs/
